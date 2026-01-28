@@ -12,6 +12,7 @@ import { MediaRoutes } from "../modules/media/media.route";
 import { SupportRoutes } from "../modules/support/support.route";
 import { AnalyticsRoutes } from "../modules/analytics/analytics.route";
 import { HostDashboardRoutes } from "../modules/hostDashboard/hostDashboard.route";
+import { BannerRoutes } from "../modules/banner/banner.route";
 
 const router = express.Router();
 
@@ -68,7 +69,11 @@ const apiRoutes = [
   {
     path: "/host-dashboard",
     route: HostDashboardRoutes,
-  } 
+  },
+  {
+    path: "/banners",
+    route: BannerRoutes,
+  }
 ];
 
 apiRoutes.forEach((route) => router.use(route.path, route.route));
