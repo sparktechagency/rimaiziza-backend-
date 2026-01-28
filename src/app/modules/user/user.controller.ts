@@ -28,9 +28,10 @@ const createUser = catchAsync(
 
 // register admin
 const createAdmin = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req, res) => {
 
-    const { ...userData } = req.body;
+    const userData = req.body;
+    console.log(userData, "payload");
     const result = await UserService.createAdminToDB(userData);
 
     sendResponse(res, {
@@ -118,7 +119,28 @@ const switchProfile = catchAsync(async (req, res) => {
 });
 
 
+const getAllUsers = catchAsync(async (req, res) => {
+  const result = await UserService.getAllUsersFromDB(req.query);
 
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved are users data",
+    data: result,
+  });
+});
+
+const getUserById = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await UserService.getUserByIdFromDB(id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieve user by ID",
+    data: result,
+  });
+});
 
 
 
@@ -188,6 +210,8 @@ export const UserController = {
   getUserProfile,
   updateProfile,
   switchProfile,
+  getAllUsers,
+  getUserById,
   updateUserStatusById,
   updateAdminStatusById,
   deleteUserById,

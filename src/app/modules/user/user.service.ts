@@ -1,5 +1,5 @@
 import { STATUS, USER_ROLES } from "../../../enums/user";
-import {  IUser } from "./user.interface";
+import { IUser } from "./user.interface";
 import { JwtPayload, Secret } from "jsonwebtoken";
 import { User } from "./user.model";
 import { StatusCodes } from "http-status-codes";
@@ -12,40 +12,34 @@ import generateOTP from "../../../util/generateOTP";
 import { emailTemplate } from "../../../shared/emailTemplate";
 import { emailHelper } from "../../../helpers/emailHelper";
 
+// --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
+  delete payload.phone;
 
-  if (payload.phone) {
-    delete payload.phone;
-  }
-
-  // check admin is exist or not;
   const isExistAdmin = await User.findOne({ email: payload.email });
   if (isExistAdmin) {
     throw new ApiError(StatusCodes.CONFLICT, "This Email already taken");
   }
 
-  // create admin to db
-  const createAdmin = await User.create(payload);
-  if (!createAdmin) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to create Admin");
-  } else {
-    await User.findByIdAndUpdate(
-      { _id: createAdmin?._id },
-      { verified: true },
-      { new: true },
-    );
-  }
+  const adminPayload = {
+    ...payload,
+    verified: true,
+    status: STATUS.ACTIVE,
+    role: USER_ROLES.ADMIN,
+  };
+
+  const createAdmin = await User.create(adminPayload);
 
   return createAdmin;
 };
 
 const getAdminFromDB = async (query: any) => {
   const baseQuery = User.find({
-    role: { $in: [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN] },
-  }).select("firstName lastName email role profileImage createdAt updatedAt status");
+    role: { $in: [USER_ROLES.ADMIN] },
+  }).select("name email role profileImage createdAt updatedAt status");
 
   const queryBuilder = new QueryBuilder<IUser>(baseQuery, query)
-    .search(["firstName", "lastName", "fullName", "email"])
+    .search(["name", "email"])
     .sort()
     .fields()
     .paginate();
@@ -60,6 +54,30 @@ const getAdminFromDB = async (query: any) => {
   };
 };
 
+const updateAdminStatusByIdToDB = async (
+  id: string,
+  status: STATUS.ACTIVE | STATUS.INACTIVE,
+) => {
+  if (![STATUS.ACTIVE, STATUS.INACTIVE].includes(status)) {
+    throw new ApiError(400, "Status must be either 'ACTIVE' or 'INACTIVE'");
+  }
+
+  const user = await User.findOne({
+    _id: id,
+    role: USER_ROLES.ADMIN,
+  });
+  if (!user) {
+    throw new ApiError(404, "No admin is found by this user ID");
+  }
+
+  const result = await User.findByIdAndUpdate(id, { status }, { new: true });
+  if (!result) {
+    throw new ApiError(400, "Failed to change status by this user ID");
+  }
+
+  return result;
+};
+
 const deleteAdminFromDB = async (id: any) => {
   const isExistAdmin = await User.findByIdAndDelete(id);
 
@@ -70,6 +88,7 @@ const deleteAdminFromDB = async (id: any) => {
   return isExistAdmin;
 };
 
+// --- USER SERVICES ---
 const createUserToDB = async (payload: any) => {
   const createUser = await User.create(payload);
   if (!createUser) {
@@ -181,6 +200,41 @@ const switchProfileToDB = async (
   return result;
 };
 
+const getAllUsersFromDB = async (query: any) => {
+  const baseQuery = User.find({
+    role: USER_ROLES.USER,
+  });
+
+  const queryBuilder = new QueryBuilder(baseQuery, query)
+    .search(["name", "email"])
+    .sort()
+    .fields()
+    .filter()
+    .paginate();
+
+  const users = await queryBuilder.modelQuery;
+
+  const meta = await queryBuilder.countTotal();
+
+  if (!users) throw new ApiError(404, "No users are found in the database");
+
+  return {
+    data: users,
+    meta,
+  };
+};
+
+const getUserByIdFromDB = async (id: string) => {
+  const result = await User.findOne({
+    _id: id,
+    role: USER_ROLES.USER,
+  });
+
+  if (!result)
+    throw new ApiError(404, "No user is found in the database by this ID");
+
+  return result;
+};
 
 const updateUserStatusByIdToDB = async (
   id: string,
@@ -196,30 +250,6 @@ const updateUserStatusByIdToDB = async (
   });
   if (!user) {
     throw new ApiError(404, "No user is found by this user ID");
-  }
-
-  const result = await User.findByIdAndUpdate(id, { status }, { new: true });
-  if (!result) {
-    throw new ApiError(400, "Failed to change status by this user ID");
-  }
-
-  return result;
-};
-
-const updateAdminStatusByIdToDB = async (
-  id: string,
-  status: STATUS.ACTIVE | STATUS.INACTIVE,
-) => {
-  if (![STATUS.ACTIVE, STATUS.INACTIVE].includes(status)) {
-    throw new ApiError(400, "Status must be either 'ACTIVE' or 'INACTIVE'");
-  }
-
-  const user = await User.findOne({
-    _id: id,
-    role: USER_ROLES.ADMIN,
-  });
-  if (!user) {
-    throw new ApiError(404, "No admin is found by this user ID");
   }
 
   const result = await User.findByIdAndUpdate(id, { status }, { new: true });
@@ -265,16 +295,13 @@ const deleteProfileFromDB = async (id: string) => {
 
 
 
-
-
-
-
-
 export const UserService = {
   createUserToDB,
   getAdminFromDB,
   deleteAdminFromDB,
   getUserProfileFromDB,
+  getAllUsersFromDB,
+  getUserByIdFromDB,
   updateProfileToDB,
   createAdminToDB,
   switchProfileToDB,

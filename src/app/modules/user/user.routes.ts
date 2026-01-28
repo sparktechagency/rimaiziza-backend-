@@ -29,6 +29,7 @@ router
 /* ---------------------------- ADMIN CREATE ------------------------------ */
 router.post(
   "/create-admin",
+  requireSuperAdmin,
   validateRequest(UserValidation.createAdminZodSchema),
   UserController.createAdmin,
 );
@@ -45,6 +46,7 @@ router.delete("/admins/:id", requireSuperAdmin, UserController.deleteAdmin);
 router
   .route("/")
   .post(UserController.createUser)
+  .get(requireAdminOrSuperAdmin, UserController.getAllUsers)
   .patch(
     requireAnyUser,
     fileUploadHandler(),
@@ -77,6 +79,7 @@ router.patch(
 /* ---------------------------- DYNAMIC USER ID ROUTES (KEEP LAST!) ------- */
 router
   .route("/:id")
+  .get(requireAdminOrSuperAdmin, UserController.getUserById)
   .delete(requireAdminOrSuperAdmin, UserController.deleteUserById);
 
 export const UserRoutes = router;

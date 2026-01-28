@@ -5,19 +5,11 @@ import { Morgan } from "./shared/morgan";
 import router from "../src/app/routes";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 import path from "path";
-import { PaymentController } from "./app/modules/payment/payment.controller";
-import { globalRateLimiter } from "./app/middlewares/rateLimiter";
 import v2Router from "./app/routes/v2";
 
 
 const app: Application = express();
 
-
-app.post(
-  "/api/v1/payments/webhook/stripe",
-  express.raw({ type: "application/json" }),
-  PaymentController.stripeWebhook
-);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -40,9 +32,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-
-
-
 //file retrieve
 app.use(express.static("uploads"));
 
@@ -54,8 +43,7 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Server is running...");
 });
 
-//global error handle
-app.use(globalErrorHandler);
+
 
 // handle not found route
 app.use((req: Request, res: Response) => {
@@ -70,5 +58,8 @@ app.use((req: Request, res: Response) => {
     ],
   });
 });
+
+//global error handle
+app.use(globalErrorHandler);
 
 export default app;

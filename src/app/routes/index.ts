@@ -11,13 +11,7 @@ import { CarRoutes } from "../modules/car/car.routes";
 import { MediaRoutes } from "../modules/media/media.route";
 import { SupportRoutes } from "../modules/support/support.route";
 import { AnalyticsRoutes } from "../modules/analytics/analytics.route";
-import { bookingRoutes } from "../modules/booking/booking.routes";
-import { paymentRoutes } from "../modules/payment/payment.routes";
-import { stripeCEARoutes } from "../modules/stripeCEA/stripeCEA.routes";
-import { transactionRoutes } from "../modules/transaction/transaction.routes";
 import { HostDashboardRoutes } from "../modules/hostDashboard/hostDashboard.route";
-import { DestinationRoutes } from "../modules/destination/destination.route";
-import { SmsLogRoutes } from "../modules/smsLog/smsLog.route";
 
 const router = express.Router();
 
@@ -72,33 +66,9 @@ const apiRoutes = [
     route: AnalyticsRoutes,
   },
   {
-    path: "/bookings",
-    route: bookingRoutes,
-  },
-  {
-    path: "/payments",
-    route: paymentRoutes,
-  },
-  {
-    path: "/stripe-accounts",
-    route: stripeCEARoutes,
-  },
-  {
-    path: "/transactions",
-    route: transactionRoutes
-  },
-  {
     path: "/host-dashboard",
     route: HostDashboardRoutes,
-  },
-  {
-    path: "/destinations",
-    route: DestinationRoutes,
-  },
-  {
-    path: "/sms-logs",
-    route: SmsLogRoutes,
-  },  
+  } 
 ];
 
 apiRoutes.forEach((route) => router.use(route.path, route.route));
