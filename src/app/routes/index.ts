@@ -13,6 +13,7 @@ import { SupportRoutes } from "../modules/support/support.route";
 import { AnalyticsRoutes } from "../modules/analytics/analytics.route";
 import { HostDashboardRoutes } from "../modules/hostDashboard/hostDashboard.route";
 import { BannerRoutes } from "../modules/banner/banner.route";
+import { ChargesRoutes } from "../modules/charges/charges.route";
 
 const router = express.Router();
 
@@ -73,6 +74,10 @@ const apiRoutes = [
   {
     path: "/banners",
     route: BannerRoutes,
+  },
+  {
+    path: "/charges",
+    route: ChargesRoutes,
   }
 ];
 
