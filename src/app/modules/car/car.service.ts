@@ -6,8 +6,13 @@ import { ICar } from "./car.interface";
 import { Car } from "./car.model";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
+import { generateVehicleId } from "../../../helpers/generateYearBasedId";
 
 const createCarToDB = async (payload: ICar) => {
+
+    const carId = await generateVehicleId();
+
+    payload.vehicleId = carId;
 
     if (payload.facilities?.length) {
         payload.facilities.forEach(facility => {
@@ -174,7 +179,7 @@ const updateCarByIdToDB = async (
     return updated;
 };
 
-const deleteCarByIdFromDB = async ( id: string) => {
+const deleteCarByIdFromDB = async (id: string) => {
     // -------------------------- Check host --------------------------
     const result = await Car.findByIdAndDelete(id);
 

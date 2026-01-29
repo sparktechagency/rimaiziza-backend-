@@ -33,6 +33,7 @@ export interface ICarFacility {
 }
 
 export interface ICar {
+  vehicleId?: string;
   brand: string;
   model: string;
   year: number;

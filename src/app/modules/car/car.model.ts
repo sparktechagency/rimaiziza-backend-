@@ -18,6 +18,11 @@ const blockedDateSchema = new Schema<IBlockedDate>(
 // Mongoose Schema
 const CarSchema = new Schema<ICar>(
   {
+    vehicleId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     brand: {
       type: String,
       required: true,
