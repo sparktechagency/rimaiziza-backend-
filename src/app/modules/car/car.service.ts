@@ -280,6 +280,34 @@ const getNearbyCarsFromDB = async ({
     return cars;
 };
 
+const getCarsByHostFromDB = async (hostId: string) => {
+    if (!hostId || !Types.ObjectId.isValid(hostId)) {
+        throw new ApiError(400, "Invalid hostId");
+    }
+
+    const cars = await Car.find({
+        assignedHosts: hostId,
+        isActive: true,
+    }).lean();
+
+    // favorite cars
+    await Promise.all(cars.map(async car => {
+        const isBookmarked = await FavoriteCar.exists({
+            userId: new Types.ObjectId(hostId),
+            referenceId: car._id,
+        });
+        isBookmarked ? car.isFavorite = true : car.isFavorite = false;
+    }));
+
+    if (!cars.length) {
+        throw new ApiError(404, "No cars found for this host");
+    }
+
+    return cars;
+};
+
+
+
 export const CarServices = {
     createCarToDB,
     getAllCarsFromDB,
@@ -287,4 +315,5 @@ export const CarServices = {
     updateCarByIdToDB,
     deleteCarByIdFromDB,
     getNearbyCarsFromDB,
+    getCarsByHostFromDB,
 };

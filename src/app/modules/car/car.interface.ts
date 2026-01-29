@@ -33,11 +33,13 @@ export interface ICarFacility {
 }
 
 export interface ICar {
+  _id?: Types.ObjectId;
   vehicleId?: string;
   brand: string;
   model: string;
   year: number;
   transmission: TRANSMISSION;
+  depositAmount: number;
   fuelType: FUEL_TYPE;
   mileage: string;
   seatNumber: number;
@@ -69,4 +71,5 @@ export interface ICar {
   defaultEndTime?: string; // e.g., "21:00"
   isActive: boolean;
   isAvailable?: boolean; // virtual field
+  isFavorite?: boolean; // virtual field
 }

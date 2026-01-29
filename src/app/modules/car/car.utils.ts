@@ -1,4 +1,7 @@
+import { Types } from "mongoose";
 import { User } from "../user/user.model";
+import { ICar } from "./car.interface";
+import { FavoriteCar } from "../favoriteCar/favoriteCar.model";
 
 export const getTargetLocation = async (queryLat?: string | number, queryLng?: string | number, userId?: string) => {
 
@@ -23,3 +26,20 @@ export const getTargetLocation = async (queryLat?: string | number, queryLng?: s
 
   return { lat, lng };
 };
+
+export const attachFavoriteToCar = async (
+  car: ICar,
+  userId?: string
+): Promise<ICar & { isFavorite: boolean }> => {
+  if (!userId || !Types.ObjectId.isValid(userId)) {
+    return { ...car, isFavorite: false };
+  }
+
+  const favorite = await FavoriteCar.findOne({
+    userId,
+    referenceId: car._id,
+  }).lean();
+
+  return { ...car, isFavorite: !!favorite };
+};
+

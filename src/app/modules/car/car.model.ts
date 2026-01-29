@@ -23,6 +23,11 @@ const CarSchema = new Schema<ICar>(
       required: true,
       unique: true,
     },
+    depositAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
     brand: {
       type: String,
       required: true,
@@ -231,6 +236,14 @@ const CarSchema = new Schema<ICar>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+    isFavorite: {
+      type: Boolean,
+      default: false,
     },
   },
   {

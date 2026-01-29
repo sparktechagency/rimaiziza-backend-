@@ -94,6 +94,21 @@ const getNearbyCars = catchAsync(async (req, res) => {
   });
 });
 
+const getCarsByHost = catchAsync(async (req, res) => {
+  const { id: hostId } = req.user as any;
+
+  const result = await CarServices.getCarsByHostFromDB(hostId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved cars by host",
+    data: result,
+  });
+});
+
+
+
 export const CarControllers = {
   createCar,
   getAllCars,
@@ -101,4 +116,5 @@ export const CarControllers = {
   updateCarById,
   deleteCarById,
   getNearbyCars,
+  getCarsByHost,
 };

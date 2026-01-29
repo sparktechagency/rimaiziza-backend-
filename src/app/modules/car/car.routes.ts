@@ -12,6 +12,10 @@ router
   .get(auth(USER_ROLES.USER), CarControllers.getNearbyCars);
 
 router
+  .route("/host")
+  .get(auth(USER_ROLES.HOST), CarControllers.getCarsByHost);
+
+router
   .route("/")
   .post(
     auth(USER_ROLES.SUPER_ADMIN),
