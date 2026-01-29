@@ -41,10 +41,26 @@ const getCarById = catchAsync(async (req, res) => {
   });
 });
 
+const updateCarById = catchAsync(async (req, res) => {
+  const id = req.params.id;
+  const carData = req.body;
+  console.log(carData);
+
+  const result = await CarServices.updateCarByIdToDB(id, carData);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully updated car by id",
+    data: result,
+  });
+});
+
 
 
 export const CarControllers = {
   createCar,
   getAllCars,
   getCarById,
+  updateCarById,
 };

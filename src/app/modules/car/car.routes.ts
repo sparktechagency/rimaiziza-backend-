@@ -7,7 +7,7 @@ import parseAllFilesData from "../../middlewares/parseAllFileData";
 
 const router = express.Router();
 
-// --- ADMIN ROUTES ---
+
 router
   .route("/")
   .post(
@@ -22,10 +22,17 @@ router
   .get(auth(USER_ROLES.SUPER_ADMIN), CarControllers.getAllCars);
 
 
-// --- PUBLIC ROUTES ---
 router
   .route("/:id")
-  .get(CarControllers.getCarById);
+  .get(CarControllers.getCarById)
+  .patch(
+    auth(USER_ROLES.SUPER_ADMIN),
+    fileUploadHandler(),
+    parseAllFilesData(
+      { fieldName: "images", forceMultiple: true },
+      { fieldName: "coverImage", forceSingle: true },
+    ),
+    CarControllers.updateCarById);
 
 
 

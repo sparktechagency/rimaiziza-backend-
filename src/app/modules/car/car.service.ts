@@ -1,4 +1,7 @@
+import { Types } from "mongoose";
+import { STATUS, USER_ROLES } from "../../../enums/user";
 import ApiError from "../../../errors/ApiErrors";
+import { User } from "../user/user.model";
 import { ICar } from "./car.interface";
 import { Car } from "./car.model";
 
@@ -39,8 +42,139 @@ const getCarByIdFromDB = async (id: string) => {
     return result;
 }
 
+export enum ACTION {
+  ADD = "ADD",
+  DELETE = "DELETE",
+}
+
+export type ArrayActionValue =
+  | string
+  | Types.ObjectId
+  | {
+      label: string;
+      value: string;
+      icon?: string;
+    };
+
+export interface IArrayAction {
+  field: "images" | "availableDays" | "facilities" | "assignedHosts";
+  action: ACTION;
+  value: ArrayActionValue;
+}
+
+// -------------------------- Utility --------------------------
+const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> =>
+  Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+  ) as Partial<T>;
+
+// -------------------------- Main Update Function --------------------------
+const updateCarByIdToDB = async (
+  carId: string,
+  payload: Partial<ICar> & { arrayAction?: IArrayAction }
+) => {
+  // -------------------------- Check user --------------------------
+  const user = await User.findOne({
+    role: { $in: [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN] },
+    verified: true,
+    status: STATUS.ACTIVE,
+  });
+
+  if (!user) {
+    throw new ApiError(404, "No approved host found by this ID");
+  }
+
+  // -------------------------- Handle array actions --------------------------
+  if (payload.arrayAction) {
+    const { field, action, value } = payload.arrayAction;
+
+    const allowedFields = ["images", "availableDays", "facilities", "assignedHosts"];
+
+    if (!allowedFields.includes(field)) {
+      throw new ApiError(400, "Invalid array field");
+    }
+
+    let updateQuery: any = {};
+
+    // -------------------------- Facilities --------------------------
+    if (field === "facilities") {
+      const isFacilityPayload = (val: ArrayActionValue): val is { label: string; value: string; icon?: string } =>
+        typeof val === "object" && val !== null && "label" in val && "value" in val;
+
+      if (action === ACTION.ADD) {
+        if (!isFacilityPayload(value)) {
+          throw new ApiError(400, "Invalid facility payload");
+        }
+        updateQuery = {
+          $addToSet: {
+            facilities: {
+              label: value.label,
+              value: value.value.toLowerCase(),
+              icon: value.icon,
+            },
+          },
+        };
+      }
+
+      if (action === ACTION.DELETE) {
+        if (typeof value !== "string") {
+          throw new ApiError(400, "Facility value must be string");
+        }
+        updateQuery = { $pull: { facilities: { value } } };
+      }
+    }
+    // -------------------------- Assigned Hosts --------------------------
+    else if (field === "assignedHosts") {
+      if (!(value instanceof Types.ObjectId) && typeof value !== "string") {
+        throw new ApiError(400, "assignedHosts value must be ObjectId or string");
+      }
+      const hostId = value instanceof Types.ObjectId ? value : new Types.ObjectId(value);
+
+      if (action === ACTION.ADD) {
+        updateQuery = { $addToSet: { assignedHosts: hostId } };
+      }
+
+      if (action === ACTION.DELETE) {
+        updateQuery = { $pull: { assignedHosts: hostId } };
+      }
+    }
+    // -------------------------- Images & Available Days --------------------------
+    else {
+      if (action === ACTION.ADD) {
+        updateQuery = { $addToSet: { [field]: value } };
+      }
+      if (action === ACTION.DELETE) {
+        updateQuery = { $pull: { [field]: value } };
+      }
+    }
+
+    delete payload.arrayAction;
+
+    const updated = await Car.findOneAndUpdate({ _id: carId }, updateQuery, { new: true });
+
+    if (!updated) {
+      throw new ApiError(404, "Car not found or not owned by user");
+    }
+
+    return updated;
+  }
+
+  // -------------------------- Handle normal updates --------------------------
+  const cleanPayload = removeUndefined(payload);
+  delete (cleanPayload as any).userId;
+
+  const updated = await Car.findOneAndUpdate({ _id: carId }, cleanPayload, { new: true });
+
+  if (!updated) {
+    throw new ApiError(404, "Car not found or not owned by user");
+  }
+
+  return updated;
+};
+
 export const CarServices = {
     createCarToDB,
     getAllCarsFromDB,
     getCarByIdFromDB,
+    updateCarByIdToDB,
 };
