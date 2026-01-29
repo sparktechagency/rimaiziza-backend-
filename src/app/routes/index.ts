@@ -4,7 +4,7 @@ import { AuthRoutes } from "../modules/auth/auth.routes";
 import { RuleRoutes } from "../modules/rule/rule.route";
 import { FaqRoutes } from "../modules/faq/faq.route";
 import { ReviewRoutes } from "../modules/review/review.route";
-import { FavouriteCarRoutes } from "../modules/favoriteCar/favoriteCar.route";
+import { FavoriteCarRoutes } from "../modules/favoriteCar/favoriteCar.route";
 import { ChatRoutes } from "../modules/chat/chat.routes";
 import { MessageRoutes } from "../modules/message/message.routes";
 import { CarRoutes } from "../modules/car/car.routes";
@@ -39,8 +39,8 @@ const apiRoutes = [
     route: ReviewRoutes,
   },
   {
-    path: "/favourites",
-    route: FavouriteCarRoutes,
+    path: "/favorites",
+    route: FavoriteCarRoutes,
   },
   {
     path: "/chats",

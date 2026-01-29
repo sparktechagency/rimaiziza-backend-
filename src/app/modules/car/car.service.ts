@@ -8,6 +8,7 @@ import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { generateVehicleId } from "../../../helpers/generateYearBasedId";
 import { getTargetLocation } from "./car.utils";
+import { FavoriteCar } from "../favoriteCar/favoriteCar.model";
 
 const createCarToDB = async (payload: ICar) => {
 
@@ -256,6 +257,25 @@ const getNearbyCarsFromDB = async ({
         { $sort: { distanceInKm: 1 } },
         { $limit: safeLimit },
     ]);
+
+    // Attach isFavorite for each car
+    if (userId && cars.length > 0) {
+        const carIds = cars.map(car => car._id);
+
+        const favorites = await FavoriteCar.find({
+            userId,
+            referenceId: { $in: carIds },
+        }).select("referenceId");
+
+        const favMap = new Map(favorites.map(f => [f.referenceId.toString(), true]));
+
+        cars.forEach(car => {
+            car.isFavorite = !!favMap.get(car._id.toString()); // true / false
+        });
+    } else {
+        // If no userId, all false
+        cars.forEach(car => (car.isFavorite = false));
+    }
 
     return cars;
 };
