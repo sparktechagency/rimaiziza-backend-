@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
-import { TFavouriteCar } from "./favouriteCar.interface";
+import { TFavoriteCar } from "./favoriteCar.interface";
 
-const favouriteCarSchema = new Schema<TFavouriteCar>(
+const favoriteCarSchema = new Schema<TFavoriteCar>(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -21,7 +21,7 @@ const favouriteCarSchema = new Schema<TFavouriteCar>(
   },
 );
 
-export const FavouriteCar = model<TFavouriteCar>(
-  "FavouriteCar",
-  favouriteCarSchema,
+export const FavoriteCar = model<TFavoriteCar>(
+  "FavoriteCar",
+  favoriteCarSchema,
 );

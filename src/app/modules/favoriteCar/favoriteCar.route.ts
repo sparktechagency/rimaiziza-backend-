@@ -1,28 +1,28 @@
 import express from "express";
 import auth from "../../middlewares/auth";
 import { USER_ROLES } from "../../../enums/user";
-import { FavouriteCarControllers } from "./favouriteCar.controller";
+import { FavoriteCarControllers } from "./favoriteCar.controller";
 
 const router = express.Router();
 
 router.post(
   "/toggle",
   auth(USER_ROLES.USER),
-  FavouriteCarControllers.toggleFavourite,
+  FavoriteCarControllers.toggleFavorite,
 );
 
-router.get("/", auth(USER_ROLES.USER), FavouriteCarControllers.getFavourite);
+router.get("/", auth(USER_ROLES.USER), FavoriteCarControllers.getFavorite);
 
 router.get(
   "/:bookmarkId",
   auth(USER_ROLES.USER),
-  FavouriteCarControllers.getSingleFavourite,
+  FavoriteCarControllers.getSingleFavorite,
 );
 
 router.delete(
   "/:referenceId",
   auth(USER_ROLES.USER),
-  FavouriteCarControllers.deleteFavourite,
+  FavoriteCarControllers.deleteFavorite,
 );
 
-export const FavouriteCarRoutes = router;
+export const FavoriteCarRoutes = router;
