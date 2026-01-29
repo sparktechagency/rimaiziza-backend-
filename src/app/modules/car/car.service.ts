@@ -7,6 +7,7 @@ import { Car } from "./car.model";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { generateVehicleId } from "../../../helpers/generateYearBasedId";
+import { getTargetLocation } from "./car.utils";
 
 const createCarToDB = async (payload: ICar) => {
 
@@ -203,10 +204,67 @@ const deleteCarByIdFromDB = async (id: string) => {
     return result;
 };
 
+// ---APP---
+const getNearbyCarsFromDB = async ({
+    lat,
+    lng,
+    userId,
+    maxDistanceKm = 10,
+    limit = 20,
+}: any) => {
+    const targetLocation = await getTargetLocation(lat, lng, userId);
+
+    console.log(targetLocation);
+
+    if (!targetLocation.lat || !targetLocation.lng) {
+        throw new ApiError(400, "Unable to resolve target location");
+    }
+
+    const safeLimit = Number(limit) || 20;
+    const safeMaxDistanceKm = Number(maxDistanceKm) || 10;
+
+    const cars = await Car.aggregate([
+        {
+            $geoNear: {
+                near: {
+                    type: "Point",
+                    coordinates: [targetLocation.lng, targetLocation.lat],
+                },
+                distanceField: "distanceInMeters",
+                maxDistance: safeMaxDistanceKm * 1000,
+                spherical: true,
+                query: {
+                    isActive: true,
+                    // optional filters
+                    blockedDates: { $not: { $elemMatch: { date: new Date() } } }
+                },
+            },
+        },
+        {
+            $addFields: {
+                distanceInKm: {
+                    $round: [{ $divide: ["$distanceInMeters", 1000] }, 2],
+                },
+            },
+        },
+        {
+            $project: {
+                distanceInMeters: 0,
+                assignedHosts: 0,
+            },
+        },
+        { $sort: { distanceInKm: 1 } },
+        { $limit: safeLimit },
+    ]);
+
+    return cars;
+};
+
 export const CarServices = {
     createCarToDB,
     getAllCarsFromDB,
     getCarByIdFromDB,
     updateCarByIdToDB,
     deleteCarByIdFromDB,
+    getNearbyCarsFromDB,
 };

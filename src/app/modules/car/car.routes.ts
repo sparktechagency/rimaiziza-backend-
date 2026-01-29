@@ -7,6 +7,9 @@ import parseAllFilesData from "../../middlewares/parseAllFileData";
 
 const router = express.Router();
 
+router
+  .route("/nearby")
+  .get(auth(USER_ROLES.USER), CarControllers.getNearbyCars);
 
 router
   .route("/")
@@ -34,6 +37,8 @@ router
     ),
     CarControllers.updateCarById)
   .delete(auth(USER_ROLES.SUPER_ADMIN), CarControllers.deleteCarById);
+
+
 
 
 

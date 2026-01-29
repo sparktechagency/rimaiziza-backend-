@@ -212,7 +212,7 @@ const getHostByIdFromDB = async (id: string) => {
         let: { hostId: "$_id" },
         pipeline: [
           {
-            $match: {
+            $match: { 
               $expr: { $in: ["$$hostId", "$assignedHosts"] },
             },
           },

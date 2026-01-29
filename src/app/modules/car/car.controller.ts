@@ -69,7 +69,30 @@ const deleteCarById = catchAsync(async (req, res) => {
   });
 });
 
+const getNearbyCars = catchAsync(async (req, res) => {
+  // default 10km, 20 limit
 
+  const { id: userId } = req.user as any;
+
+  console.log(userId);
+
+  const { latitude, longitude, maxDistanceKm, limit } = req.query;
+
+  const result = await CarServices.getNearbyCarsFromDB({
+    latitude,
+    longitude,
+    userId,
+    maxDistanceKm,
+    limit,
+  });
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved nearby cars",
+    data: result,
+  });
+});
 
 export const CarControllers = {
   createCar,
@@ -77,4 +100,5 @@ export const CarControllers = {
   getCarById,
   updateCarById,
   deleteCarById,
+  getNearbyCars,
 };
