@@ -185,6 +185,16 @@ const deleteHostById = catchAsync(async (req, res) => {
   });
 });
 
+const getTotalUsersAndHosts = catchAsync(async (req, res) => {
+  const result = await UserService.getTotalUsersAndHostsFromDB();
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved total users and hosts",
+    data: result,
+  });
+})
+
 
 
 const switchProfile = catchAsync(async (req, res) => {
@@ -296,6 +306,7 @@ export const UserController = {
   getUserById,
   updateHostStatusById,
   deleteHostById,
+  getTotalUsersAndHosts,
   createHost,
   ghostLoginAsHost,
   getAllHosts,

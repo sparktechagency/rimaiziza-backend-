@@ -37,6 +37,8 @@ const createAdminToDB = async (payload: any): Promise<IUser> => {
 const getAdminFromDB = async (query: any) => {
   const baseQuery = User.find({
     role: { $in: [USER_ROLES.ADMIN] },
+    status: STATUS.ACTIVE,
+    verified: true,
   }).select("name email role profileImage createdAt updatedAt status");
 
   const queryBuilder = new QueryBuilder<IUser>(baseQuery, query)
@@ -124,7 +126,7 @@ const ghostLoginAsHost = async (superAdmin: JwtPayload, hostId: string) => {
     throw new ApiError(404, 'Host not found');
   }
 
-    // Generate JWT as host
+  // Generate JWT as host
   const token = jwtHelper.createToken(
     {
       id: host._id,
@@ -149,6 +151,8 @@ const ghostLoginAsHost = async (superAdmin: JwtPayload, hostId: string) => {
 const getAllHostFromDB = async (query: any) => {
   const baseQuery = User.find({
     role: USER_ROLES.HOST,
+    status: STATUS.ACTIVE,
+    verified: true,
   });
 
   const queryBuilder = new QueryBuilder(baseQuery, query)
@@ -223,6 +227,15 @@ const deleteHostByIdFromD = async (id: string) => {
   }
 
   return result;
+};
+
+const getTotalUsersAndHostsFromDB = async () => {
+  const [totalUsers, totalHosts] = await Promise.all([
+    User.countDocuments({ role: USER_ROLES.USER, status: STATUS.ACTIVE, verified: true }),
+    User.countDocuments({ role: USER_ROLES.HOST, status: STATUS.ACTIVE, verified: true }),
+  ]);
+
+  return { totalUsers, totalHosts };
 };
 
 
@@ -348,6 +361,8 @@ const switchProfileToDB = async (
 const getAllUsersFromDB = async (query: any) => {
   const baseQuery = User.find({
     role: USER_ROLES.USER,
+    status: STATUS.ACTIVE,
+    verified: true,
   });
 
   const queryBuilder = new QueryBuilder(baseQuery, query)
@@ -454,6 +469,7 @@ export const UserService = {
   getHostByIdFromDB,
   updateHostStatusByIdToDB,
   deleteHostByIdFromD,
+  getTotalUsersAndHostsFromDB,
   createAdminToDB,
   switchProfileToDB,
   updateUserStatusByIdToDB,

@@ -67,6 +67,12 @@ router.delete(
   UserController.deleteHostById,
 );
 
+router.get(
+  "/total-users-hosts",
+  requireAdminOrSuperAdmin,
+  UserController.getTotalUsersAndHosts,
+);  
+
 
 
 /* ---------------------------- USER CREATE & UPDATE ---------------------- */
