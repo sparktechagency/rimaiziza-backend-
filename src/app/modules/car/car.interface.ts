@@ -22,12 +22,6 @@ export enum TRANSMISSION {
   AUTOMATIC = "AUTOMATIC",
 }
 
-export enum CAR_VERIFICATION_STATUS {
-  PENDING = "PENDING",
-  APPROVED = "APPROVED",
-  REJECTED = "REJECTED",
-}
-
 export interface IBlockedDate {
   date: Date;
   reason?: string;
@@ -39,7 +33,6 @@ export interface ICarFacility {
 }
 
 export interface ICar {
-  userId: Types.ObjectId;
   brand: string;
   model: string;
   year: number;
@@ -49,19 +42,24 @@ export interface ICar {
   seatNumber: number;
   color: string;
   about: string;
-  verificationStatus: CAR_VERIFICATION_STATUS;
   shortDescription: string;
   licensePlate: string;
   vin?: string;
-  carRegistrationPaperFrontPic: string;
-  carRegistrationPaperBackPic: string;
+  carRegistrationPaperFrontPic?: string;
+  carRegistrationPaperBackPic?: string;
+  coverImage: string;
   images: string[];
+  assignedHosts?: Types.ObjectId[];
   dailyPrice: number;
   hourlyPrice?: number;
   minimumTripDuration: number; // in hours
   withDriver: boolean;
   city: string;
-  pickupPoint: { type: "Point"; coordinates: [number, number], address: string }; // GeoJSON Point
+  pickupPoint: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude],
+    address: string;
+  }; // GeoJSON Point
   availableDays: AVAILABLE_DAYS[];
   facilities: ICarFacility[];
   availableHours: string[];
@@ -71,5 +69,3 @@ export interface ICar {
   isActive: boolean;
   isAvailable?: boolean; // virtual field
 }
-
-

@@ -1,5 +1,6 @@
 export type IFolderName =
   | "images"
+  | "coverImage"
   | "seatingPlan"
   | "nidFrontPic"
   | "nidBackPic"

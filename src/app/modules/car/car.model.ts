@@ -1,7 +1,6 @@
 import { model, Schema } from "mongoose";
 import {
   AVAILABLE_DAYS,
-  CAR_VERIFICATION_STATUS,
   FUEL_TYPE,
   IBlockedDate,
   ICar,
@@ -19,12 +18,6 @@ const blockedDateSchema = new Schema<IBlockedDate>(
 // Mongoose Schema
 const CarSchema = new Schema<ICar>(
   {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
     brand: {
       type: String,
       required: true,
@@ -51,27 +44,10 @@ const CarSchema = new Schema<ICar>(
       enum: Object.values(FUEL_TYPE),
       required: true,
     },
-    verificationStatus: {
-      type: String,
-      enum: Object.values(CAR_VERIFICATION_STATUS),
-      default: CAR_VERIFICATION_STATUS.PENDING,
-    },
-    // airConditioning: {
-    //   type: Boolean,
-    //   required: true,
-    // },
-    // gpsNavigation: {
-    //   type: Boolean,
-    //   required: true,
-    // },
     mileage: {
       type: String,
       required: true,
     },
-    // bluetooth: {
-    //   type: Boolean,
-    //   required: true,
-    // },
     seatNumber: {
       type: Number,
       required: true,
@@ -90,7 +66,6 @@ const CarSchema = new Schema<ICar>(
     shortDescription: {
       type: String,
       required: true,
-      maxlength: 160,
     },
     blockedDates: {
       type: [blockedDateSchema],
@@ -111,9 +86,13 @@ const CarSchema = new Schema<ICar>(
     },
     carRegistrationPaperFrontPic: {
       type: String,
-      required: true,
+      required: false,
     },
     carRegistrationPaperBackPic: {
+      type: String,
+      required: false,
+    },
+    coverImage: {
       type: String,
       required: true,
     },
@@ -123,6 +102,12 @@ const CarSchema = new Schema<ICar>(
         required: true,
       },
     ], // array of image URLs
+    assignedHosts: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     dailyPrice: {
       type: Number,
       required: true,
@@ -180,12 +165,6 @@ const CarSchema = new Schema<ICar>(
         required: false,
       },
     ],
-    // facilities: [
-    //   {
-    //     type: String,
-    //     required: false,
-    //   },
-    // ],
     defaultStartTime: {
       type: String,
       enum: [

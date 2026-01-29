@@ -9,6 +9,7 @@ export type IUser = {
   password?: string;
   verified: boolean;
   membershipId?: string;
+  phone?: string;
   status: STATUS;
   location?: {
     type: "Point";

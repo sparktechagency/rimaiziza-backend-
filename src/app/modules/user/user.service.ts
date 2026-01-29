@@ -156,7 +156,7 @@ const getAllHostFromDB = async (query: any) => {
   });
 
   const queryBuilder = new QueryBuilder(baseQuery, query)
-    .search(["name", "email"])
+    .search(["name", "email","membershipId"])
     .sort()
     .fields()
     .filter()

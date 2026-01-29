@@ -60,6 +60,9 @@ const fileUploadHandler = () => {
         case "images":
           uploadDir = path.join(baseUploadDir, "images");
           break;
+        case "coverImage":
+          uploadDir = path.join(baseUploadDir, "coverImage");
+          break;
         case "thumbnail":
           uploadDir = path.join(baseUploadDir, "thumbnail");
           break;
@@ -124,6 +127,7 @@ const fileUploadHandler = () => {
       file.fieldname === "profileImage" ||
       file.fieldname === "childImage" ||
       file.fieldname === "images" ||
+      file.fieldname === "coverImage" ||
       file.fieldname === "seatingPlan" ||
       file.fieldname === "nidFrontPic" ||
       file.fieldname === "nidBackPic" ||
@@ -252,6 +256,7 @@ const fileUploadHandler = () => {
     { name: "profileImage", maxCount: 1 },
     { name: "childImage", maxCount: 1 },
     { name: "images", maxCount: 14 },
+    { name: "coverImage", maxCount: 1 },
     { name: "seatingPlan", maxCount: 10 },
     { name: "nidFrontPic", maxCount: 1 },
     { name: "nidBackPic", maxCount: 1 },
