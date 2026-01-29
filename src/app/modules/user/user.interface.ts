@@ -8,6 +8,7 @@ export type IUser = {
   profileImage?: string;
   password?: string;
   verified: boolean;
+  membershipId?: string;
   status: STATUS;
   location?: {
     type: "Point";

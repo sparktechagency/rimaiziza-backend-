@@ -40,6 +40,33 @@ router.get("/admins", requireSuperAdmin, UserController.getAdmin);
 router.delete("/admins/:id", requireSuperAdmin, UserController.deleteAdmin);
 
 
+/* ---------------------------- HOST LIST ------------------------------ */
+router.post(
+  "/create-host",
+  requireSuperAdmin,
+  UserController.createHost,
+);
+
+
+router.post(
+  "/ghost-login/:hostId",
+  requireSuperAdmin,
+  UserController.ghostLoginAsHost,
+);
+
+router.get("/hosts", requireAdminOrSuperAdmin, UserController.getAllHosts);
+router.get("/hosts/:id", requireAdminOrSuperAdmin, UserController.getHostById);
+router.patch(
+  "/hosts/status/:id",
+  requireAdminOrSuperAdmin,
+  UserController.updateHostStatusById,
+);
+router.delete(
+  "/hosts/:id",
+  requireAdminOrSuperAdmin,
+  UserController.deleteHostById,
+);
+
 
 
 /* ---------------------------- USER CREATE & UPDATE ---------------------- */

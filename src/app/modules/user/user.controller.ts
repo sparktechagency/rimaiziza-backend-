@@ -105,6 +105,88 @@ const updateProfile = catchAsync(async (req, res) => {
   });
 });
 
+//register host
+const createHost = catchAsync(async (req, res) => {
+  const userData = req.body;
+  console.log(userData, "payload");
+  const result = await UserService.createHostToDB(userData);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Host created successfully",
+    data: result,
+  });
+});
+
+const ghostLoginAsHost = catchAsync(async (req, res) => {
+  const { hostId } = req.params;
+  const user: any = req.user;
+  const result = await UserService.ghostLoginAsHost(user, hostId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Ghost Host logged in successfully",
+    data: result,
+  });
+});
+
+
+const getAllHosts = catchAsync(async (req, res) => {
+  const result = await UserService.getAllHostFromDB(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved are hosts data",
+    data: result,
+  });
+});
+
+const getHostById = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await UserService.getHostByIdFromDB(id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieve host by ID",
+    data: result,
+  });
+});
+
+
+const updateHostStatusById = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const { status } = req.body;
+
+  const result = await UserService.updateHostStatusByIdToDB(id, status);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Host status updated successfully",
+    data: result,
+  });
+});
+
+const deleteHostById = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const result = await UserService.deleteHostByIdFromD(id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Host is deleted successfully",
+    data: result,
+  });
+});
+
+
+
 const switchProfile = catchAsync(async (req, res) => {
   const { role } = req.body;
   const { id: userId } = req.user;
@@ -212,6 +294,12 @@ export const UserController = {
   switchProfile,
   getAllUsers,
   getUserById,
+  updateHostStatusById,
+  deleteHostById,
+  createHost,
+  ghostLoginAsHost,
+  getAllHosts,
+  getHostById,
   updateUserStatusById,
   updateAdminStatusById,
   deleteUserById,

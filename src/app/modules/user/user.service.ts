@@ -11,6 +11,7 @@ import QueryBuilder from "../../builder/queryBuilder";
 import generateOTP from "../../../util/generateOTP";
 import { emailTemplate } from "../../../shared/emailTemplate";
 import { emailHelper } from "../../../helpers/emailHelper";
+import { generateMembershipId } from "../../../helpers/generateYearBasedId";
 
 // --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
@@ -88,8 +89,152 @@ const deleteAdminFromDB = async (id: any) => {
   return isExistAdmin;
 };
 
+// --- HOST SERVICES ---
+const createHostToDB = async (payload: any) => {
+
+
+  const isExistHost = await User.findOne({ email: payload.email });
+  if (isExistHost) {
+    throw new ApiError(StatusCodes.CONFLICT, "This Email already taken");
+  }
+
+  const membershipId = await generateMembershipId();
+
+  const hostPayload = {
+    ...payload,
+    verified: true,
+    status: STATUS.ACTIVE,
+    role: USER_ROLES.HOST,
+    membershipId,
+  };
+
+  const createHost = await User.create(hostPayload);
+
+  return createHost;
+};
+
+const ghostLoginAsHost = async (superAdmin: JwtPayload, hostId: string) => {
+  if (superAdmin.role !== USER_ROLES.SUPER_ADMIN) {
+    throw new ApiError(403, 'Unauthorized: Only SuperAdmin can use ghost mode');
+  }
+
+  const host = await User.findById(hostId);
+
+  if (!host || host.role !== USER_ROLES.HOST) {
+    throw new ApiError(404, 'Host not found');
+  }
+
+    // Generate JWT as host
+  const token = jwtHelper.createToken(
+    {
+      id: host._id,
+      email: host.email,
+      role: USER_ROLES.HOST,
+    },
+    config.jwt.jwt_secret as Secret,
+    config.jwt.jwt_expire_in as string,
+  );
+
+  return {
+    accessToken: token,
+    host: {
+      id: host._id,
+      name: host.name,
+      email: host.email,
+      membershipId: host.membershipId,
+    },
+  };
+};
+
+const getAllHostFromDB = async (query: any) => {
+  const baseQuery = User.find({
+    role: USER_ROLES.HOST,
+  });
+
+  const queryBuilder = new QueryBuilder(baseQuery, query)
+    .search(["name", "email"])
+    .sort()
+    .fields()
+    .filter()
+    .paginate();
+
+  const users = await queryBuilder.modelQuery;
+
+  const meta = await queryBuilder.countTotal();
+
+  if (!users) throw new ApiError(404, "No hosts are found in the database");
+
+  return {
+    data: users,
+    meta,
+  };
+};
+
+const getHostByIdFromDB = async (id: string) => {
+  const result = await User.findOne({
+    _id: id,
+    role: USER_ROLES.HOST,
+  });
+
+  if (!result)
+    throw new ApiError(404, "No host is found in the database by this ID");
+
+  return result;
+};
+
+const updateHostStatusByIdToDB = async (
+  id: string,
+  status: STATUS.ACTIVE | STATUS.INACTIVE,
+) => {
+  if (![STATUS.ACTIVE, STATUS.INACTIVE].includes(status)) {
+    throw new ApiError(400, "Status must be either 'ACTIVE' or 'INACTIVE'");
+  }
+
+  const user = await User.findOne({
+    _id: id,
+    role: USER_ROLES.HOST,
+  });
+  if (!user) {
+    throw new ApiError(404, "No host is found by this host ID");
+  }
+
+  const result = await User.findByIdAndUpdate(id, { status }, { new: true });
+  if (!result) {
+    throw new ApiError(400, "Failed to change status by this host ID");
+  }
+
+  return result;
+};
+
+const deleteHostByIdFromD = async (id: string) => {
+  const user = await User.findOne({
+    _id: id,
+    role: USER_ROLES.HOST,
+  });
+
+  if (!user) {
+    throw new ApiError(404, "Host doest not exist in the database");
+  }
+
+  const result = await User.findByIdAndDelete(id);
+
+  if (!result) {
+    throw new ApiError(400, "Failed to delete user by this ID");
+  }
+
+  return result;
+};
+
+
+
 // --- USER SERVICES ---
 const createUserToDB = async (payload: any) => {
+
+  const isExistUser = await User.findOne({ email: payload.email });
+  if (isExistUser) {
+    throw new ApiError(StatusCodes.CONFLICT, "This Email already taken");
+  }
+
   const createUser = await User.create(payload);
   if (!createUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');
@@ -303,6 +448,12 @@ export const UserService = {
   getAllUsersFromDB,
   getUserByIdFromDB,
   updateProfileToDB,
+  createHostToDB,
+  ghostLoginAsHost,
+  getAllHostFromDB,
+  getHostByIdFromDB,
+  updateHostStatusByIdToDB,
+  deleteHostByIdFromD,
   createAdminToDB,
   switchProfileToDB,
   updateUserStatusByIdToDB,

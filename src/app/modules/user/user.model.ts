@@ -20,13 +20,17 @@ const userSchema = new Schema<IUser, UserModal>(
     email: {
       type: String,
       required: false,
-      unique: false,
+      unique: true,
       lowercase: true,
     },
     profileImage: {
       type: String,
       required: false,
       default: "",
+    },
+    membershipId: {
+      type: String,
+      required: false,
     },
     password: {
       type: String,
