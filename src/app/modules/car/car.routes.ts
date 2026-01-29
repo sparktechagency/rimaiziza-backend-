@@ -32,7 +32,8 @@ router
       { fieldName: "images", forceMultiple: true },
       { fieldName: "coverImage", forceSingle: true },
     ),
-    CarControllers.updateCarById);
+    CarControllers.updateCarById)
+  .delete(auth(USER_ROLES.SUPER_ADMIN), CarControllers.deleteCarById);
 
 
 
