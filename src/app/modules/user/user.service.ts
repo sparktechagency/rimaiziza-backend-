@@ -12,6 +12,7 @@ import generateOTP from "../../../util/generateOTP";
 import { emailTemplate } from "../../../shared/emailTemplate";
 import { emailHelper } from "../../../helpers/emailHelper";
 import { generateMembershipId } from "../../../helpers/generateYearBasedId";
+import { Types } from "mongoose";
 
 // --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
@@ -149,6 +150,7 @@ const ghostLoginAsHost = async (superAdmin: JwtPayload, hostId: string) => {
 };
 
 const getAllHostFromDB = async (query: any) => {
+  //  Fetch hosts using QueryBuilder
   const baseQuery = User.find({
     role: USER_ROLES.HOST,
     status: STATUS.ACTIVE,
@@ -156,35 +158,86 @@ const getAllHostFromDB = async (query: any) => {
   });
 
   const queryBuilder = new QueryBuilder(baseQuery, query)
-    .search(["name", "email","membershipId"])
+    .search(["name", "email", "membershipId"])
     .sort()
     .fields()
     .filter()
     .paginate();
 
-  const users = await queryBuilder.modelQuery;
-
+  const hosts = await queryBuilder.modelQuery;
   const meta = await queryBuilder.countTotal();
 
-  if (!users) throw new ApiError(404, "No hosts are found in the database");
+  if (!hosts || hosts.length === 0) throw new ApiError(404, "No hosts found");
+
+  const hostIds = hosts.map(h => h._id);
+
+  // Aggregate hosts with full vehicle data and count
+  const hostsWithVehicles = await User.aggregate([
+    { $match: { _id: { $in: hostIds } } },
+    {
+      $lookup: {
+        from: "cars", // MongoDB collection name for Car
+        let: { hostId: "$_id" },
+        pipeline: [
+          { $match: { $expr: { $in: ["$$hostId", "$assignedHosts"] } } },
+          { $project: { assignedHosts: 0 } }, // optional, remove assignedHosts
+        ],
+        as: "vehicles",
+      },
+    },
+    {
+      $addFields: {
+        vehicleCount: { $size: "$vehicles" },
+      },
+    },
+  ]);
 
   return {
-    data: users,
+    data: hostsWithVehicles,
     meta,
   };
 };
 
 const getHostByIdFromDB = async (id: string) => {
-  const result = await User.findOne({
-    _id: id,
-    role: USER_ROLES.HOST,
-  });
+  const result = await User.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(id),
+        role: USER_ROLES.HOST,
+      },
+    },
+    {
+      $lookup: {
+        from: "cars", // Car collection name
+        let: { hostId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $in: ["$$hostId", "$assignedHosts"] },
+            },
+          },
+          {
+            $project: {
+              assignedHosts: 0, // optional cleanup
+            },
+          },
+        ],
+        as: "vehicles",
+      },
+    },
+    {
+      $addFields: {
+        vehicleCount: { $size: "$vehicles" },
+      },
+    },
+  ]);
 
-  if (!result)
+  if (!result.length)
     throw new ApiError(404, "No host is found in the database by this ID");
 
-  return result;
+  return result[0];
 };
+
 
 const updateHostStatusByIdToDB = async (
   id: string,
