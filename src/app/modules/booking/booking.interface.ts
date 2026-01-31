@@ -18,6 +18,10 @@ export interface IBooking {
     userId: Types.ObjectId;
     hostId: Types.ObjectId;
     transactionId?: Types.ObjectId;
+    nidFrontPic?: string;
+    nidBackPic?: string;
+    drivingLicenseFrontPic?: string;
+    drivingLicenseBackPic?: string;
     isCanceledByUser?: boolean;
     isCanceledByHost?: boolean;
     fromDate: Date;

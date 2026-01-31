@@ -27,6 +27,22 @@ const bookingSchema = new Schema<IBooking>(
             type: Schema.Types.ObjectId,
             ref: "Transaction"
         },
+        nidFrontPic: {
+            type: String,
+            required:false
+        },
+         nidBackPic: {
+            type: String,
+            required:false
+        },
+        drivingLicenseFrontPic: {
+            type: String,
+            required:false
+        },
+        drivingLicenseBackPic: {
+            type: String,
+            required:false
+        },
         isCanceledByUser: {
             type: Boolean,
             default: false
