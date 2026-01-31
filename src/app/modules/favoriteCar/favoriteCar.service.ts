@@ -2,9 +2,9 @@ import mongoose, { Types } from "mongoose";
 import ApiError from "../../../errors/ApiErrors";
 import { StatusCodes } from "http-status-codes";
 import { FavoriteCar } from "./favoriteCar.model";
-// import { getCarTripCountMap } from "../car/car.utils";
 import { ReviewServices } from "../review/review.service";
-import { REVIEW_TYPE } from "../review/review.interface";
+import { REVIEW_TARGET_TYPE } from "../review/review.interface";
+import { getCarTripCountMap } from "../car/car.utils";
 
 const checkFavoriteCarStatus = async (userId: string, referenceId: string) => {
   const favorite = await FavoriteCar.findOne({ userId, referenceId });
@@ -58,33 +58,35 @@ const getFavorite = async (userId: string) => {
     .map((id: any) => new Types.ObjectId(id));
 
   // ---------- STEP 2: Get trip count map ----------
-  // const tripCountMap = await getCarTripCountMap(carIds);
+  const tripCountMap = await getCarTripCountMap(carIds);
 
 
-  // ---------- STEP 3: Attach trips + rating ----------
-  const finalFavorites = await Promise.all(
-    favorites.map(async (fav: any) => {
-      const carId = fav.referenceId?._id?.toString();
+ // ---------- STEP 3: Attach trips + rating ----------
+const finalFavorites = await Promise.all(
+  favorites.map(async (fav: any) => {
+    const carId = fav.referenceId?._id?.toString();
+    if (!carId) return fav;
 
-      const reviewSummary =
-        await ReviewServices.getReviewSummaryFromDB(
-          carId,
-          REVIEW_TYPE.CAR
-        );
+    // এখন review system dual, reviewType = HOST
+    const reviewSummary =
+      await ReviewServices.getReviewSummary(
+        fav.referenceId.userId.toString(), // hostId
+        REVIEW_TARGET_TYPE.HOST, // reviewType
+      );
 
-      return {
-        ...fav,
-        referenceId: {
-          ...fav.referenceId,
-          // trips: tripCountMap[carId] || 0,
-          averageRating: reviewSummary.averageRating,
-          totalReviews: reviewSummary.totalReviews,
-          starCounts: reviewSummary.starCounts,
-          reviews: reviewSummary.reviews,
-        },
-      };
-    })
-  );
+    return {
+      ...fav,
+      referenceId: {
+        ...fav.referenceId,
+        trips: tripCountMap[carId] || 0,
+        averageRating: reviewSummary.averageRating,
+        totalReviews: reviewSummary.totalReviews,
+        starCounts: reviewSummary.starCounts,
+        reviews: reviewSummary.reviews,
+      },
+    };
+  })
+);
 
   return finalFavorites;
 };
@@ -110,10 +112,10 @@ const deleteFavorite = async (userId: string, referenceId: string) => {
   const result = await FavoriteCar.deleteOne({ userId, referenceId });
 
   if (!result.deletedCount) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Favourite not found");
+    throw new ApiError(StatusCodes.NOT_FOUND, "Favorite not found");
   }
 
-  return { message: "Favourite removed successfully" };
+  return { message: "Favorite removed successfully" };
 };
 
 export const FavoriteCarServices = {

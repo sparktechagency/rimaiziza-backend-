@@ -7,10 +7,12 @@ import { Car } from "./car.model";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { generateVehicleId } from "../../../helpers/generateYearBasedId";
-import { checkCarAvailabilityByDate, getCarCalendar, getTargetLocation } from "./car.utils";
+import { checkCarAvailabilityByDate, getCarCalendar, getCarTripCount, getTargetLocation } from "./car.utils";
 import { FavoriteCar } from "../favoriteCar/favoriteCar.model";
 import { Booking } from "../booking/booking.model";
 import { BOOKING_STATUS } from "../booking/booking.interface";
+import { ReviewServices } from "../review/review.service";
+import { IReviewSummary, REVIEW_TARGET_TYPE } from "../review/review.interface";
 
 const createCarToDB = async (payload: ICar) => {
 
@@ -694,19 +696,52 @@ const getNearbyCarsFromDB = async (params: any) => {
     const cars = await Car.aggregate(pipeline);
 
     // ৫. Attach isFavorite
-    if (userId && cars.length > 0) {
-        const carIds = cars.map((car) => car._id);
-        const favorites = await FavoriteCar.find({
-            userId,
-            referenceId: { $in: carIds },
-        }).select("referenceId");
+    // if (userId && cars.length > 0) {
+    //     const carIds = cars.map((car) => car._id);
+    //     const favorites = await FavoriteCar.find({
+    //         userId,
+    //         referenceId: { $in: carIds },
+    //     }).select("referenceId");
 
+    //     const favMap = new Map(favorites.map((f) => [f.referenceId.toString(), true]));
+    //     cars.forEach((car) => {
+    //         car.isFavorite = !!favMap.get(car._id.toString());
+    //     });
+    // } else {
+    //     cars.forEach((car) => (car.isFavorite = false));
+    // }
+
+    // -------------------- REVIEWS --------------------
+    const hostIds = cars.map((c) => c.assignedHosts).filter(Boolean).map((id) => id.toString());
+    let reviewMap: Map<string, any> = new Map();
+    if (hostIds.length > 0) {
+        reviewMap = await ReviewServices.getBulkReviewSummary(hostIds, REVIEW_TARGET_TYPE.HOST);
+    }
+
+    // -------------------- FAVORITES + Attach reviews --------------------
+    if (userId && cars.length > 0) {
+        const carIds = cars.map((c) => c._id);
+        const favorites = await FavoriteCar.find({ userId, referenceId: { $in: carIds } }).select("referenceId");
         const favMap = new Map(favorites.map((f) => [f.referenceId.toString(), true]));
+
         cars.forEach((car) => {
             car.isFavorite = !!favMap.get(car._id.toString());
+            const hostId = car.assignedHosts?.toString();
+            const review = hostId ? reviewMap.get(hostId) : null;
+
+            car.averageRating = review?.averageRating ?? 0;
+            car.totalReviews = review?.totalReviews ?? 0;
+            car.starCounts = review?.starCounts ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            car.reviews = review?.reviews ?? [];
         });
     } else {
-        cars.forEach((car) => (car.isFavorite = false));
+        cars.forEach((car) => {
+            car.isFavorite = false;
+            car.averageRating = 0;
+            car.totalReviews = 0;
+            car.starCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            car.reviews = [];
+        });
     }
 
     return {
@@ -724,15 +759,13 @@ const getNearbyCarsFromDB = async (params: any) => {
 };
 
 const getCarByIdForUserFromDB = async (id: string, userId: string) => {
-
-
     const car = await Car.findById(id);
 
-
     if (!car) {
-        return {};
+        return null;
     }
 
+    // Favorite check
     const isBookmarked = await FavoriteCar.exists({
         userId,
         referenceId: id,
@@ -740,20 +773,34 @@ const getCarByIdForUserFromDB = async (id: string, userId: string) => {
 
     const now = new Date();
     const isAvailable = await checkCarAvailabilityByDate(car, now);
-    const availabilityCalendar = await getCarCalendar(id.toString());
-    // const reviewSummary = await ReviewServices.getReviewSummaryFromDB(id, REVIEW_TYPE.CAR);
-    // const trips = await getCarTripCount(id);
+    const availabilityCalendar = await getCarCalendar(id);
+    const trips = await getCarTripCount(id);
+
+    // HOST review (safe handling)
+    let reviewSummary: IReviewSummary = {
+        averageRating: 0,
+        totalReviews: 0,
+        starCounts: {},
+        reviews: [],
+    };
+
+    if (car.assignedHosts) {
+        reviewSummary = await ReviewServices.getReviewSummary(
+            car.assignedHosts.toString(),
+            REVIEW_TARGET_TYPE.HOST
+        );
+    }
 
     return {
         ...car.toObject(),
-        // trips: trips || 0,
+        trips: trips || 0,
         isAvailable,
         availabilityCalendar,
         isFavorite: Boolean(isBookmarked),
-        // averageRating: reviewSummary.averageRating,
-        // totalReviews: reviewSummary.totalReviews,
-        // starCounts: reviewSummary.starCounts,
-        // reviews: reviewSummary.reviews,
+        averageRating: reviewSummary.averageRating,
+        totalReviews: reviewSummary.totalReviews,
+        starCounts: reviewSummary.starCounts,
+        reviews: reviewSummary.reviews,
     };
 };
 

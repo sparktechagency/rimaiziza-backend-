@@ -1,46 +1,42 @@
-import { model, Schema } from "mongoose";
-import { TReview } from "./review.interface";
+import { Schema, model, Types } from "mongoose";
+import { IReview, REVIEW_TARGET_TYPE } from "./review.interface";
 
-const reviewSchema = new Schema<TReview>(
+const reviewSchema = new Schema<IReview>(
   {
-    carId: {
+    reviewForId: {
       type: Schema.Types.ObjectId,
-      ref: "Car",
-      required: [true, "Car ID is required"],
-      index: true,
+      required: true,
+      refPath: "reviewType"
     },
-    hostId: {
+    reviewById: {
       type: Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Host ID is required"],
-      index: true,
-    },
-    fromUserId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Reviewer user ID is required"],
-      index: true,
+      required: true,
+      ref: "User"
     },
     ratingValue: {
       type: Number,
-      required: [true, "Rating is required"],
-      min: [1, "Rating cannot be less than 1"],
-      max: [5, "Rating cannot be more than 5"],
+      required: true,
+      min: 1,
+      max: 5
     },
     feedback: {
       type: String,
       trim: true,
-      maxlength: [500, "Feedback cannot be more than 500 characters"],
+      default: ""
+    },
+    reviewType: {
+      type: String,
+      enum: Object.values(REVIEW_TARGET_TYPE),
+      required: true,
     },
   },
   {
     timestamps: true,
-    versionKey: false,
-  },
+    versionKey: false
+  }
 );
 
-reviewSchema.index({ carId: 1, fromUserId: 1 }, { unique: true });
+// Prevent duplicate review: same reviewer cannot review same target more than once
+reviewSchema.index({ reviewForId: 1, reviewById: 1 }, { unique: true });
 
-reviewSchema.index({ hostId: 1, createdAt: -1 });
-
-export const Review = model<TReview>("Review", reviewSchema);
+export const Review = model<IReview>("Review", reviewSchema);

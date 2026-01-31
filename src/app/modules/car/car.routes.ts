@@ -36,7 +36,6 @@ router
   )
   .get(auth(USER_ROLES.SUPER_ADMIN), CarControllers.getAllCars);
 
-
 router
   .route("/:id")
   .get(CarControllers.getCarById)
@@ -49,9 +48,6 @@ router
     ),
     CarControllers.updateCarById)
   .delete(auth(USER_ROLES.SUPER_ADMIN), CarControllers.deleteCarById);
-
-
-
 
 
 export const CarRoutes = router;

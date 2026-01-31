@@ -1,122 +1,175 @@
 import { Types } from "mongoose";
-import { Review } from "./review.model";
-import { REVIEW_TYPE, TReview } from "./review.interface";
 import ApiError from "../../../errors/ApiErrors";
-import { Car } from "../car/car.model";
+import { IReview, REVIEW_TARGET_TYPE } from "./review.interface";
+import { Review } from "./review.model";
 
-const createReviewToDB = async (payload: TReview, reviewerId: string) => {
-  const { carId } = payload;
+// Create review (dual: host <-> user)
+const createReview = async (payload: IReview, reviewerId: string) => {
+  const { reviewForId, ratingValue, feedback, reviewType } = payload;
 
-  if (!carId) {
-    throw new ApiError(400, "carId is required");
-  }
+  if (!reviewForId) throw new ApiError(400, "reviewForId is required");
+  if (!reviewType) throw new ApiError(400, "reviewType is required");
+  if (![REVIEW_TARGET_TYPE.HOST, REVIEW_TARGET_TYPE.USER].includes(reviewType))
+    throw new ApiError(400, "Invalid reviewType");
 
-  const car = await Car.findById(carId); // hostId = User _id
-  if (!car) throw new ApiError(404, "Car not found");
+  if (reviewForId.toString() === reviewerId)
+    throw new ApiError(400, "You cannot review yourself");
 
-  const hostUserId = car.userId.toString();
-
-  if (hostUserId === reviewerId) {
-    throw new ApiError(400, "You cannot review your own car");
-  }
-
-  if (
-    !Number.isInteger(payload.ratingValue) ||
-    payload.ratingValue < 1 ||
-    payload.ratingValue > 5
-  ) {
+  if (!Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 5)
     throw new ApiError(400, "Rating must be an integer between 1 and 5");
-  }
 
-  const reviewData: TReview = {
-    carId: new Types.ObjectId(carId),
-    hostId: car.userId, // User _id
-    fromUserId: new Types.ObjectId(reviewerId),
-    ratingValue: payload.ratingValue,
-    feedback: payload.feedback?.trim(),
-  };
-
-  // check if already reviewed
+  // Check if already reviewed
   const already = await Review.findOne({
-    carId: reviewData.carId,
-    fromUserId: reviewData.fromUserId,
+    reviewForId,
+    reviewById: reviewerId,
   });
-  if (already) throw new ApiError(400, "You have already reviewed this car");
+  if (already) throw new ApiError(400, "You have already reviewed this user/host");
 
-  const review = await Review.create(reviewData);
+  const review = await Review.create({
+    reviewForId: new Types.ObjectId(reviewForId),
+    reviewById: new Types.ObjectId(reviewerId),
+    ratingValue,
+    feedback: feedback?.trim(),
+    reviewType,
+  });
 
   return review;
 };
 
-const getReviewSummaryFromDB = async (
-  targetId: string,
-  type: REVIEW_TYPE.CAR | REVIEW_TYPE.HOST,
-) => {
-  const objectId = new Types.ObjectId(targetId);
-
-  if (!targetId || !type) {
-    throw new ApiError(400, "targetId and type (CAR/HOST) are required");
-  }
-  if (type !== REVIEW_TYPE.CAR && type !== REVIEW_TYPE.HOST) {
-    throw new ApiError(400, "Invalid type. Use 'CAR' or 'HOST'");
-  }
-
-  const isCar = type === REVIEW_TYPE.CAR;
-  const matchQuery = isCar ? { carId: objectId } : { hostId: objectId };
+// Get review summary for a given target (host or user)
+const getReviewSummary = async (reviewForId: string, reviewType: REVIEW_TARGET_TYPE) => {
+  const objectId = new Types.ObjectId(reviewForId);
 
   const summary = await Review.aggregate([
-    { $match: matchQuery },
-    { $match: { ratingValue: { $in: [1, 2, 3, 4, 5] } } },
+    { $match: { reviewForId: objectId, reviewType } },
     { $group: { _id: "$ratingValue", count: { $sum: 1 } } },
   ]);
 
   const totalReviews = summary.reduce((a, c) => a + c.count, 0);
   const totalScore = summary.reduce((a, c) => a + c._id * c.count, 0);
-  const average = totalReviews ? totalScore / totalReviews : 0;
-  
+  const averageRating = totalReviews ? totalScore / totalReviews : 0;
+
   const starCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   summary.forEach((item) => {
-    const rating = item._id as number;
-    if (rating >= 1 && rating <= 5) {
-      starCounts[rating] = item.count;
-    }
+    starCounts[item._id as number] = item.count;
   });
 
-  // reviews list
-  const reviews = await Review.find(matchQuery)
+  const reviews = await Review.find({ reviewForId: objectId, reviewType })
     .populate({
-      path: "fromUserId",
-      select: "firstName lastName role email phone profileImage location createdAt updatedAt _id",
+      path: "reviewById",
+      select: "name role email phone profileImage location _id",
     })
     .sort({ createdAt: -1 })
     .lean();
 
-  const reviewList = reviews.map((review: any) => ({
-    reviewId: review._id,
-    ratingValue: review.ratingValue,
-    feedback: review.feedback,
-    createdAt: review.createdAt,
+  const reviewList = reviews.map((r: any) => ({
+    reviewId: r._id,
+    ratingValue: r.ratingValue,
+    feedback: r.feedback,
+    createdAt: r.createdAt,
     fromUser: {
-      _id: review.fromUserId._id,
-      firstName: review.fromUserId.firstName,
-      lastName: review.fromUserId.lastName,
-      role: review.fromUserId.role,
-      email: review.fromUserId?.email,
-      phone: review.fromUserId?.phone,
-      profileImage: review.fromUserId?.profileImage,
-      location: review.fromUserId?.location,
+      _id: r.reviewById._id,
+      name: r.reviewById.name,
+      role: r.reviewById.role,
+      email: r.reviewById.email,
+      phone: r.reviewById.phone,
+      profileImage: r.reviewById.profileImage,
+      location: r.reviewById.location,
     },
   }));
 
   return {
-    averageRating: Number(average.toFixed(1)),
+    averageRating: Number(averageRating.toFixed(1)),
     totalReviews,
     starCounts,
     reviews: reviewList,
   };
 };
 
+type RatingValue = 1 | 2 | 3 | 4 | 5;
+
+interface IStarCountItem {
+  rating: RatingValue;
+  count: number;
+}
+
+const getBulkReviewSummary = async (
+  targetIds: string[],
+  reviewType: REVIEW_TARGET_TYPE
+) => {
+  const objectIds = targetIds.map((id) => new Types.ObjectId(id));
+
+  const summary = await Review.aggregate([
+    {
+      $match: {
+        reviewForId: { $in: objectIds },
+        reviewType,
+      },
+    },
+    {
+      $group: {
+        _id: {
+          reviewForId: "$reviewForId",
+          ratingValue: "$ratingValue",
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $group: {
+        _id: "$_id.reviewForId",
+        ratings: {
+          $push: {
+            rating: "$_id.ratingValue",
+            count: "$count",
+          },
+        },
+        totalReviews: { $sum: "$count" },
+        totalScore: {
+          $sum: {
+            $multiply: ["$_id.ratingValue", "$count"],
+          },
+        },
+      },
+    },
+  ]);
+
+  const map = new Map<
+    string,
+    {
+      averageRating: number;
+      totalReviews: number;
+      starCounts: Record<number, number>;
+    }
+  >();
+
+  summary.forEach((item) => {
+    const starCounts: Record<1 | 2 | 3 | 4 | 5, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+
+    item.ratings.forEach((r: { rating: 1 | 2 | 3 | 4 | 5; count: number }) => {
+      starCounts[r.rating] = r.count;
+    });
+
+    map.set(item._id.toString(), {
+      averageRating: Number(
+        (item.totalScore / item.totalReviews).toFixed(1)
+      ),
+      totalReviews: item.totalReviews,
+      starCounts,
+    });
+  });
+
+  return map;
+};
+
 export const ReviewServices = {
-  createReviewToDB,
-  getReviewSummaryFromDB,
+  createReview,
+  getReviewSummary,
+  getBulkReviewSummary,
 };

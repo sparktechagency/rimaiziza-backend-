@@ -79,26 +79,68 @@ export const checkCarAvailabilityByDate = async (car: any, targetDate: Date) => 
 
 
 export const getCarCalendar = async (carId: string) => {
-    const calendar = [];
-    const today = new Date();
+  const calendar = [];
+  const today = new Date();
 
-    for (let i = 0; i < 30; i++) {
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + i);
-        const dateString = targetDate.toISOString().split("T")[0];
+  for (let i = 0; i < 30; i++) {
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + i);
+    const dateString = targetDate.toISOString().split("T")[0];
 
-        // if any slot is available for that date
-        const availability = await CarServices.getAvailability(carId, dateString);
+    // if any slot is available for that date
+    const availability = await CarServices.getAvailability(carId, dateString);
 
 
-        // if at least `1` slot is available
-        const isAnySlotAvailable = availability.slots.some(slot => slot.isAvailable === true);
+    // if at least `1` slot is available
+    const isAnySlotAvailable = availability.slots.some(slot => slot.isAvailable === true);
 
-        calendar.push({
-            date: dateString,
-            available: isAnySlotAvailable,
-            reason: availability.blockedReason || (isAnySlotAvailable ? "" : "Fully Booked"),
-        });
-    }
-    return calendar;
+    calendar.push({
+      date: dateString,
+      available: isAnySlotAvailable,
+      reason: availability.blockedReason || (isAnySlotAvailable ? "" : "Fully Booked"),
+    });
+  }
+  return calendar;
+};
+
+export const getCarTripCount = async (
+  carId: Types.ObjectId | string
+): Promise<number> => {
+  const count = await Booking.countDocuments({
+    carId: new Types.ObjectId(carId),
+    bookingStatus: BOOKING_STATUS.CONFIRMED,
+    isCanceledByHost: { $ne: true },
+    isCanceledByUser: { $ne: true },
+  });
+
+  return count;
+};
+
+// bulk car trip
+export const getCarTripCountMap = async (
+  carIds: Types.ObjectId[]
+): Promise<Record<string, number>> => {
+  const result = await Booking.aggregate([
+    {
+      $match: {
+        carId: { $in: carIds },
+        bookingStatus: BOOKING_STATUS.CONFIRMED,
+        isCanceledByHost: { $ne: true },
+        isCanceledByUser: { $ne: true },
+      },
+    },
+    {
+      $group: {
+        _id: "$carId",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const map: Record<string, number> = {};
+  for (const item of result) {
+    map[item._id.toString()] = item.count;
+  }
+
+  return map;
 };
