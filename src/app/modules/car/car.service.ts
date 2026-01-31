@@ -7,7 +7,7 @@ import { Car } from "./car.model";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { generateVehicleId } from "../../../helpers/generateYearBasedId";
-import { checkCarAvailabilityByDate, getCarCalendar, getCarTripCount, getTargetLocation } from "./car.utils";
+import { checkCarAvailabilityByDate, getCarCalendar, getCarTripCount, getCarTripCountMap, getTargetLocation } from "./car.utils";
 import { FavoriteCar } from "../favoriteCar/favoriteCar.model";
 import { Booking } from "../booking/booking.model";
 import { BOOKING_STATUS } from "../booking/booking.interface";
@@ -718,6 +718,12 @@ const getNearbyCarsFromDB = async (params: any) => {
         reviewMap = await ReviewServices.getBulkReviewSummary(hostIds, REVIEW_TARGET_TYPE.HOST);
     }
 
+    // -------------------- TRIPS --------------------
+    const tripCountMap = await getCarTripCountMap(cars.map((c) => c._id));
+    cars.forEach((car) => {
+        (car as any).trips = tripCountMap[car._id.toString()] ?? 0;
+    });
+
     // -------------------- FAVORITES + Attach reviews --------------------
     if (userId && cars.length > 0) {
         const carIds = cars.map((c) => c._id);
@@ -814,18 +820,41 @@ const getCarsByHostFromDB = async (hostId: string) => {
         isActive: true,
     }).lean();
 
-    // favorite cars
-    await Promise.all(cars.map(async car => {
-        const isBookmarked = await FavoriteCar.exists({
-            userId: new Types.ObjectId(hostId),
-            referenceId: car._id,
-        });
-        isBookmarked ? car.isFavorite = true : car.isFavorite = false;
-    }));
+    // -------------------- FAVORITES --------------------
+    await Promise.all(
+        cars.map(async (car) => {
+            const isBookmarked = await FavoriteCar.exists({
+                userId: new Types.ObjectId(hostId),
+                referenceId: car._id,
+            });
+            car.isFavorite = !!isBookmarked;
 
-    if (!cars.length) {
-        throw new ApiError(404, "No cars found for this host");
-    }
+
+
+        })
+    );
+
+    // -------------------- TRIPS --------------------
+    const tripCountMap = await getCarTripCountMap(cars.map((c) => c._id));
+    cars.forEach((car) => {
+        (car as any).trips = tripCountMap[car._id.toString()] ?? 0;
+    });
+
+
+    // -------------------- REVIEWS --------------------
+    const reviewSummary = await ReviewServices.getReviewSummary(
+        hostId,
+        REVIEW_TARGET_TYPE.HOST
+    );
+
+    cars.forEach((car) => {
+        // Virtual / temporary fields
+        (car as any).averageRating = reviewSummary?.averageRating ?? 0;
+        (car as any).totalReviews = reviewSummary?.totalReviews ?? 0;
+        (car as any).starCounts = reviewSummary?.starCounts ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        (car as any).reviews = reviewSummary?.reviews ?? [];
+    });
+
 
     return cars;
 };
