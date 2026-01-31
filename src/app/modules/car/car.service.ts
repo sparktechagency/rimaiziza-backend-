@@ -97,7 +97,7 @@ const updateCarByIdToDB = async (
     if (payload.arrayAction) {
         const { field, action, value } = payload.arrayAction;
 
-        const allowedFields = ["images", "availableDays", "facilities", "assignedHosts"];
+        const allowedFields = ["images", "availableDays", "facilities"];
 
         if (!allowedFields.includes(field)) {
             throw new ApiError(400, "Invalid array field");
@@ -130,21 +130,6 @@ const updateCarByIdToDB = async (
                     throw new ApiError(400, "Facility value must be string");
                 }
                 updateQuery = { $pull: { facilities: { value } } };
-            }
-        }
-        // -------------------------- Assigned Hosts --------------------------
-        else if (field === "assignedHosts") {
-            if (!(value instanceof Types.ObjectId) && typeof value !== "string") {
-                throw new ApiError(400, "assignedHosts value must be ObjectId or string");
-            }
-            const hostId = value instanceof Types.ObjectId ? value : new Types.ObjectId(value);
-
-            if (action === ACTION.ADD) {
-                updateQuery = { $addToSet: { assignedHosts: hostId } };
-            }
-
-            if (action === ACTION.DELETE) {
-                updateQuery = { $pull: { assignedHosts: hostId } };
             }
         }
         // -------------------------- Images & Available Days --------------------------

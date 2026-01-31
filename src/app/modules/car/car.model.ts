@@ -112,12 +112,10 @@ const CarSchema = new Schema<ICar>(
         required: true,
       },
     ], // array of image URLs
-    assignedHosts: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    assignedHosts: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
     dailyPrice: {
       type: Number,
       required: true,

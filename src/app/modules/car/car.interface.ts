@@ -52,7 +52,7 @@ export interface ICar {
   carRegistrationPaperBackPic?: string;
   coverImage: string;
   images: string[];
-  assignedHosts?: Types.ObjectId[];
+  assignedHosts?: Types.ObjectId;
   dailyPrice: number;
   hourlyPrice?: number;
   minimumTripDuration: number; // in hours
