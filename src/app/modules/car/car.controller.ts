@@ -1,3 +1,4 @@
+import ApiError from "../../../errors/ApiErrors";
 import catchAsync from "../../../shared/catchAsync";
 import sendResponse from "../../../shared/sendResponse";
 import { Car } from "./car.model";
@@ -70,27 +71,64 @@ const deleteCarById = catchAsync(async (req, res) => {
 });
 
 const getNearbyCars = catchAsync(async (req, res) => {
-  // default 10km, 20 limit
-
-  const { id: userId } = req.user as any;
-
-  console.log(userId);
-
-  const { latitude, longitude, maxDistanceKm, limit } = req.query;
+  const userId = req.user?.id || req.user?._id || null;
 
   const result = await CarServices.getNearbyCarsFromDB({
-    latitude,
-    longitude,
+    ...req.query,
     userId,
-    maxDistanceKm,
-    limit,
   });
 
   sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Cars retrieved successfully",
+    data: result,
+  });
+});
+
+const getCarByIdForUser = catchAsync(async (req, res) => {
+  const { id: userId } = req.user as any;
+  const { id } = req.params;
+  const result = await CarServices.getCarByIdForUserFromDB(id, userId);
+  sendResponse(res, {
     success: true,
     statusCode: 200,
-    message: "Successfully retrieved nearby cars",
+    message: "Successfully retrieved car by id for user",
     data: result,
+  });
+})
+
+const getAvailability = catchAsync(async (req, res) => {
+  const { carId } = req.params;
+  const { date } = req.query;
+
+  // Validation
+  if (!carId) {
+    throw new ApiError(400, "Car ID is required");
+  }
+
+  if (!date || typeof date !== "string") {
+    throw new ApiError(
+      400,
+      "Date query parameter is required (e.g., ?date=2025-12-12)",
+    );
+  }
+
+  // YYYY-MM-DD format check
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new ApiError(400, "Invalid date format. Use YYYY-MM-DD");
+  }
+
+  const availability = await CarServices.getAvailability(carId, date);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Car availability fetched successfully",
+    data: {
+      carId,
+      ...availability,
+    },
   });
 });
 
@@ -113,6 +151,8 @@ export const CarControllers = {
   createCar,
   getAllCars,
   getCarById,
+  getCarByIdForUser,
+  getAvailability,
   updateCarById,
   deleteCarById,
   getNearbyCars,

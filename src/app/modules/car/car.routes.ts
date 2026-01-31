@@ -16,6 +16,14 @@ router
   .get(auth(USER_ROLES.HOST), CarControllers.getCarsByHost);
 
 router
+  .route("/user/:id")
+  .get(auth(USER_ROLES.USER), CarControllers.getCarByIdForUser);
+
+router
+  .route("/availability/:carId")
+  .get(auth(USER_ROLES.USER), CarControllers.getAvailability);
+
+router
   .route("/")
   .post(
     auth(USER_ROLES.SUPER_ADMIN),

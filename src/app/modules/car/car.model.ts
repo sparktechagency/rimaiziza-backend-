@@ -134,6 +134,16 @@ const CarSchema = new Schema<ICar>(
       type: Boolean,
       default: false,
     },
+    country: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    state: {
+      type: String,
+      required: false,
+      trim: true,
+    },
     city: {
       type: String,
       required: true,

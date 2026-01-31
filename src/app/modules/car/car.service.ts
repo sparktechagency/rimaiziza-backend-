@@ -2,13 +2,15 @@ import { Types } from "mongoose";
 import { STATUS, USER_ROLES } from "../../../enums/user";
 import ApiError from "../../../errors/ApiErrors";
 import { User } from "../user/user.model";
-import { ICar } from "./car.interface";
+import { AVAILABLE_DAYS, ICar } from "./car.interface";
 import { Car } from "./car.model";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { generateVehicleId } from "../../../helpers/generateYearBasedId";
-import { getTargetLocation } from "./car.utils";
+import { checkCarAvailabilityByDate, getCarCalendar, getTargetLocation } from "./car.utils";
 import { FavoriteCar } from "../favoriteCar/favoriteCar.model";
+import { Booking } from "../booking/booking.model";
+import { BOOKING_STATUS } from "../booking/booking.interface";
 
 const createCarToDB = async (payload: ICar) => {
 
@@ -191,78 +193,568 @@ const deleteCarByIdFromDB = async (id: string) => {
 };
 
 // ---APP---
-const getNearbyCarsFromDB = async ({
-    lat,
-    lng,
-    userId,
-    maxDistanceKm = 10,
-    limit = 20,
-}: any) => {
-    const targetLocation = await getTargetLocation(lat, lng, userId);
 
-    console.log(targetLocation);
+const getAvailability = async (carId: string, dateString: string) => {
+    // ---------- Normalize Date (UTC Day) ----------
+    const targetDate = new Date(dateString);
+    const normalizedDate = new Date(
+        Date.UTC(
+            targetDate.getUTCFullYear(),
+            targetDate.getUTCMonth(),
+            targetDate.getUTCDate(),
+        ),
+    );
 
-    if (!targetLocation.lat || !targetLocation.lng) {
-        throw new ApiError(400, "Unable to resolve target location");
+    // ---------- Fetch Car ----------
+    const car = await Car.findById(carId).select(
+        "isActive availableDays availableHours defaultStartTime defaultEndTime blockedDates",
+    );
+
+    if (!car) throw new ApiError(404, "Car not found");
+    if (!car.isActive) {
+        return generateBlockedResponse(normalizedDate, "Car is not active");
     }
 
-    const safeLimit = Number(limit) || 20;
-    const safeMaxDistanceKm = Number(maxDistanceKm) || 10;
+    // ---------- Priority 1: Manual Full Day Block ----------
+    const blockedEntry = car.blockedDates?.find(
+        (b: any) =>
+            new Date(b.date).toISOString().split("T")[0] ===
+            normalizedDate.toISOString().split("T")[0],
+    );
 
-    const cars = await Car.aggregate([
-        {
+    if (blockedEntry) {
+        return generateBlockedResponse(
+            normalizedDate,
+            blockedEntry.reason || "Blocked by host",
+        );
+    }
+
+    // ---------- Day Availability Check ----------
+    const dayName = normalizedDate
+        .toLocaleDateString("en-US", { weekday: "long" })
+        .toUpperCase() as AVAILABLE_DAYS;
+
+    if (car.availableDays?.length && !car.availableDays.includes(dayName)) {
+        return generateBlockedResponse(
+            normalizedDate,
+            "Car not available on this day",
+        );
+    }
+
+    // ---------- Priority 2: Define Operating Hours ----------
+    const openHoursSet = new Set<number>();
+
+    if (car.availableHours?.length) {
+        car.availableHours.forEach((t: string) => {
+            const h = parseInt(t.split(":")[0], 10);
+            if (!isNaN(h) && h >= 0 && h <= 23) {
+                openHoursSet.add(h);
+            }
+        });
+    } else if (car.defaultStartTime && car.defaultEndTime) {
+        const start = parseInt(car.defaultStartTime.split(":")[0], 10);
+        const end = parseInt(car.defaultEndTime.split(":")[0], 10) || 24;
+
+        for (let h = start; h < end; h++) {
+            openHoursSet.add(h % 24);
+        }
+    } else {
+        for (let i = 0; i < 24; i++) openHoursSet.add(i);
+    }
+
+    // ---------- Priority 3: Booking Conflict ----------
+    const bookings = await Booking.find({
+        carId: new Types.ObjectId(carId),
+        bookingStatus: { $in: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING] },
+        fromDate: { $lt: new Date(normalizedDate.getTime() + 86400000) },
+        toDate: { $gt: normalizedDate },
+    }).select("fromDate toDate");
+
+    const bookingBlockedHours = getBookingBlockedHours(bookings, normalizedDate);
+
+    // ---------- Final Slot Generation ----------
+    const slots = Array.from({ length: 24 }, (_, hour) => {
+        // Outside operating hours
+        if (!openHoursSet.has(hour)) {
+            return {
+                hour,
+                time: `${String(hour).padStart(2, "0")}:00`,
+                isAvailable: false,
+                blocked: true,
+                blockedReason: "Outside operating hours",
+            };
+        }
+
+        // Already booked (only if operating hour)
+        if (bookingBlockedHours.has(hour)) {
+            return {
+                hour,
+                time: `${String(hour).padStart(2, "0")}:00`,
+                isAvailable: false,
+                blocked: true,
+                blockedReason: "Already booked",
+            };
+        }
+
+        // Available
+        return {
+            hour,
+            time: `${String(hour).padStart(2, "0")}:00`,
+            isAvailable: true,
+            blocked: false,
+            blockedReason: "",
+        };
+    });
+
+    return {
+        carId,
+        date: normalizedDate.toISOString().split("T")[0],
+        isFullyBlocked: false,
+        blockedReason: "",
+        slots,
+    };
+};
+
+/**
+ * =========================
+ * HELPER: BOOKING HOURS
+ * =========================
+ */
+const getBookingBlockedHours = (bookings: any[], date: Date) => {
+    const blockedHours = new Set<number>();
+
+    const dayStart = new Date(
+        Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            0,
+            0,
+            0,
+        ),
+    );
+
+    const dayEnd = new Date(
+        Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            23,
+            59,
+            59,
+        ),
+    );
+
+    bookings.forEach((booking) => {
+        const start = new Date(
+            Math.max(booking.fromDate.getTime(), dayStart.getTime()),
+        );
+        const end = new Date(Math.min(booking.toDate.getTime(), dayEnd.getTime()));
+
+        let current = new Date(start);
+
+        while (current < end) {
+            blockedHours.add(current.getUTCHours());
+            current.setUTCHours(current.getUTCHours() + 1);
+        }
+    });
+
+    return blockedHours;
+};
+
+/**
+ * =========================
+ * HELPER: FULL DAY BLOCK
+ * =========================
+*/
+
+const generateBlockedResponse = (date: Date, reason: string) => ({
+    date: date.toISOString().split("T")[0],
+    isFullyBlocked: true,
+    blockedReason: reason,
+    slots: Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        time: `${String(hour).padStart(2, "0")}:00`,
+        isAvailable: false,
+        blocked: true,
+        blockedReason: reason,
+    })),
+});
+
+export interface IBlockedDate {
+    date: Date;
+    reason?: string;
+}
+
+const createCarBlockedDatesToDB = async (
+    carId: string,
+    payload: IBlockedDate[],
+) => {
+
+
+    // Ensure car belongs to this host
+    const car = await Car.findOne({ _id: carId }).select("blockedDates");
+    if (!car) throw new ApiError(404, "No car found by this ID");
+
+    // Merge old + new
+    const combined = [...(car.blockedDates || []), ...payload];
+
+    // Normalize & remove duplicates by date
+    const normalized = Array.from(
+        new Map(
+            combined.map((item) => [
+                new Date(item.date).toISOString().split("T")[0], // unique key YYYY-MM-DD
+                { date: new Date(item.date), reason: item.reason || "" },
+            ]),
+        ).values(),
+    );
+
+    // Update DB
+    const result = await Car.findByIdAndUpdate(
+        carId,
+        { blockedDates: normalized },
+        { new: true },
+    );
+
+    if (!result) throw new ApiError(400, "Failed to update blocked dates");
+
+    return result;
+};
+
+// Helper function to parse query parameters
+const parseQueryParams = (params: any) => {
+    const {
+        lat,
+        lng,
+        maxDistanceKm,
+        limit,
+        country,
+        state,
+        city,
+        minPrice,
+        maxPrice,
+        searchTerm,
+        brand,
+        transmission,
+        fuelType,
+        seatNumber,
+        minYear,
+        maxYear,
+        facilities,
+        availableDays,
+        sortBy = "price",
+        sortOrder = "asc",
+        userId,
+    } = params;
+
+    // Parse facilities (comma-separated string to array)
+    let parsedFacilities: string[] | undefined;
+    if (facilities && typeof facilities === "string") {
+        parsedFacilities = facilities.split(",").map((f: string) => f.trim());
+    }
+
+    // Parse available days (comma-separated string to array)
+    let parsedAvailableDays: string[] | undefined;
+    if (availableDays && typeof availableDays === "string") {
+        parsedAvailableDays = availableDays.split(",").map((d: string) => d.trim());
+    }
+
+    // Parse transmission (single or multiple)
+    let parsedTransmission: string[] | string | undefined;
+    if (transmission && typeof transmission === "string") {
+        parsedTransmission = transmission.includes(",")
+            ? transmission.split(",").map((t: string) => t.trim())
+            : transmission;
+    }
+
+    // Parse fuel type (single or multiple)
+    let parsedFuelType: string[] | string | undefined;
+    if (fuelType && typeof fuelType === "string") {
+        parsedFuelType = fuelType.includes(",")
+            ? fuelType.split(",").map((f: string) => f.trim())
+            : fuelType;
+    }
+
+    // Parse seat number (single or multiple)
+    let parsedSeatNumber: number[] | number | undefined;
+    if (seatNumber) {
+        if (typeof seatNumber === "string" && seatNumber.includes(",")) {
+            parsedSeatNumber = seatNumber.split(",").map((s: string) => Number(s.trim()));
+        } else {
+            parsedSeatNumber = Number(seatNumber);
+        }
+    }
+
+    return {
+        lat: lat ? Number(lat) : undefined,
+        lng: lng ? Number(lng) : undefined,
+        userId,
+        maxDistanceKm: maxDistanceKm ? Number(maxDistanceKm) : undefined,
+        limit: limit ? Number(limit) : 20,
+        country: country as string,
+        state: state as string,
+        city: city as string,
+        minPrice: minPrice ? Number(minPrice) : undefined,
+        maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        searchTerm: searchTerm as string,
+        brand: brand as string,
+        transmission: parsedTransmission,
+        fuelType: parsedFuelType,
+        seatNumber: parsedSeatNumber,
+        minYear: minYear ? Number(minYear) : undefined,
+        maxYear: maxYear ? Number(maxYear) : undefined,
+        facilities: parsedFacilities,
+        availableDays: parsedAvailableDays,
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as string,
+    };
+};
+
+// Main service function
+const getNearbyCarsFromDB = async (params: any) => {
+    const parsedParams = parseQueryParams(params);
+
+    const {
+        lat,
+        lng,
+        userId,
+        maxDistanceKm,
+        limit,
+        country,
+        state,
+        city,
+        minPrice,
+        maxPrice,
+        searchTerm,
+        brand,
+        transmission,
+        fuelType,
+        seatNumber,
+        minYear,
+        maxYear,
+        facilities,
+        availableDays,
+        sortBy,
+        sortOrder,
+    } = parsedParams;
+
+    // ১. Target location only if lat/lng provided
+    let targetLocation: { lat?: number; lng?: number } = {};
+    if (lat != null && lng != null) {
+        targetLocation = await getTargetLocation(lat, lng, userId);
+    }
+
+    // ২. Build query filters
+    const queryFilters: any = {
+        isActive: true,
+        blockedDates: { $not: { $elemMatch: { date: new Date() } } },
+    };
+
+    // Search term
+    if (searchTerm && searchTerm.trim()) {
+        const searchRegex = new RegExp(searchTerm.trim(), "i");
+        queryFilters.$or = [
+            { brand: searchRegex },
+            { model: searchRegex },
+            { city: searchRegex },
+            { state: searchRegex },
+            { country: searchRegex },
+            { color: searchRegex },
+            { shortDescription: searchRegex },
+            { about: searchRegex },
+        ];
+    }
+
+    // Location filters
+    if (city && city.trim()) {
+        queryFilters.city = { $regex: new RegExp(`^${city.trim()}$`, "i") };
+    }
+    if (state && state.trim()) {
+        queryFilters.state = { $regex: new RegExp(`^${state.trim()}$`, "i") };
+    }
+    if (country && country.trim()) {
+        queryFilters.country = { $regex: new RegExp(`^${country.trim()}$`, "i") };
+    }
+
+    // Brand filter
+    if (brand && brand.trim()) {
+        queryFilters.brand = { $regex: new RegExp(`^${brand.trim()}$`, "i") };
+    }
+
+    // Transmission filter
+    if (transmission) {
+        queryFilters.transmission = Array.isArray(transmission)
+            ? { $in: transmission }
+            : transmission;
+    }
+
+    // Fuel type filter
+    if (fuelType) {
+        queryFilters.fuelType = Array.isArray(fuelType) ? { $in: fuelType } : fuelType;
+    }
+
+    // Seat number filter
+    if (seatNumber != null) {
+        queryFilters.seatNumber = Array.isArray(seatNumber)
+            ? { $in: seatNumber.map(Number) }
+            : Number(seatNumber);
+    }
+
+    // Year range filter
+    if (minYear != null || maxYear != null) {
+        queryFilters.year = {};
+        if (minYear != null) queryFilters.year.$gte = Number(minYear);
+        if (maxYear != null) queryFilters.year.$lte = Number(maxYear);
+    }
+
+    // Price range filter
+    if (minPrice != null || maxPrice != null) {
+        queryFilters.dailyPrice = {};
+        if (minPrice != null) queryFilters.dailyPrice.$gte = Number(minPrice);
+        if (maxPrice != null) queryFilters.dailyPrice.$lte = Number(maxPrice);
+    }
+
+
+
+    // Facilities filter
+    if (facilities && Array.isArray(facilities) && facilities.length > 0) {
+        queryFilters["facilities.value"] = { $all: facilities };
+    }
+
+    // Available days filter
+    if (availableDays && Array.isArray(availableDays) && availableDays.length > 0) {
+        queryFilters.availableDays = { $all: availableDays };
+    }
+
+    // ৩. Build aggregation pipeline
+    const pipeline: any[] = [];
+
+    // $geoNear only if coordinates exist
+    if (targetLocation.lat != null && targetLocation.lng != null) {
+        pipeline.push({
             $geoNear: {
                 near: {
                     type: "Point",
                     coordinates: [targetLocation.lng, targetLocation.lat],
                 },
                 distanceField: "distanceInMeters",
-                maxDistance: safeMaxDistanceKm * 1000,
+                maxDistance: maxDistanceKm ? Number(maxDistanceKm) * 1000 : undefined,
                 spherical: true,
-                query: {
-                    isActive: true,
-                    // optional filters
-                    blockedDates: { $not: { $elemMatch: { date: new Date() } } }
-                },
+                query: queryFilters,
             },
-        },
-        {
+        });
+
+        pipeline.push({
             $addFields: {
-                distanceInKm: {
-                    $round: [{ $divide: ["$distanceInMeters", 1000] }, 2],
-                },
+                distanceInKm: { $round: [{ $divide: ["$distanceInMeters", 1000] }, 2] },
             },
-        },
-        {
-            $project: {
-                distanceInMeters: 0,
-                assignedHosts: 0,
-            },
-        },
-        { $sort: { distanceInKm: 1 } },
-        { $limit: safeLimit },
-    ]);
+        });
+    } else {
+        pipeline.push({ $match: queryFilters });
+        pipeline.push({ $addFields: { distanceInKm: null } });
+    }
 
-    // Attach isFavorite for each car
+    // Exclude unnecessary fields
+    pipeline.push({
+        $project: {
+            distanceInMeters: 0,
+            assignedHosts: 0,
+            carRegistrationPaperFrontPic: 0,
+            carRegistrationPaperBackPic: 0,
+            vin: 0,
+        },
+    });
+
+    // Dynamic sorting
+    const sortOptions: any = {};
+
+    if (targetLocation.lat != null && targetLocation.lng != null && sortBy === "distance") {
+        sortOptions.distanceInKm = sortOrder === "desc" ? -1 : 1;
+    } else if (sortBy === "price") {
+        sortOptions.dailyPrice = sortOrder === "desc" ? -1 : 1;
+    } else if (sortBy === "year") {
+        sortOptions.year = sortOrder === "desc" ? -1 : 1;
+    } else if (sortBy === "seats") {
+        sortOptions.seatNumber = sortOrder === "desc" ? -1 : 1;
+    } else {
+        // Default sorting
+        if (targetLocation.lat != null && targetLocation.lng != null) {
+            sortOptions.distanceInKm = 1;
+            sortOptions.dailyPrice = 1;
+        } else {
+            sortOptions.dailyPrice = 1;
+            sortOptions.brand = 1;
+        }
+    }
+
+    pipeline.push({ $sort: sortOptions });
+    pipeline.push({ $limit: Number(limit) || 20 });
+
+    // ৪. Execute aggregation
+    const cars = await Car.aggregate(pipeline);
+
+    // ৫. Attach isFavorite
     if (userId && cars.length > 0) {
-        const carIds = cars.map(car => car._id);
-
+        const carIds = cars.map((car) => car._id);
         const favorites = await FavoriteCar.find({
             userId,
             referenceId: { $in: carIds },
         }).select("referenceId");
 
-        const favMap = new Map(favorites.map(f => [f.referenceId.toString(), true]));
-
-        cars.forEach(car => {
-            car.isFavorite = !!favMap.get(car._id.toString()); // true / false
+        const favMap = new Map(favorites.map((f) => [f.referenceId.toString(), true]));
+        cars.forEach((car) => {
+            car.isFavorite = !!favMap.get(car._id.toString());
         });
     } else {
-        // If no userId, all false
-        cars.forEach(car => (car.isFavorite = false));
+        cars.forEach((car) => (car.isFavorite = false));
     }
 
-    return cars;
+    return {
+        cars,
+        total: cars.length,
+        filters: {
+            location: { lat, lng, maxDistanceKm, country, state, city },
+            price: { minPrice, maxPrice },
+            search: searchTerm,
+            vehicle: { brand, transmission, fuelType, seatNumber, minYear, maxYear },
+            preferences: { facilities, availableDays },
+            sorting: { sortBy, sortOrder },
+        },
+    };
+};
+
+const getCarByIdForUserFromDB = async (id: string, userId: string) => {
+
+
+    const car = await Car.findById(id);
+
+
+    if (!car) {
+        return {};
+    }
+
+    const isBookmarked = await FavoriteCar.exists({
+        userId,
+        referenceId: id,
+    });
+
+    const now = new Date();
+    const isAvailable = await checkCarAvailabilityByDate(car, now);
+    const availabilityCalendar = await getCarCalendar(id.toString());
+    // const reviewSummary = await ReviewServices.getReviewSummaryFromDB(id, REVIEW_TYPE.CAR);
+    // const trips = await getCarTripCount(id);
+
+    return {
+        ...car.toObject(),
+        // trips: trips || 0,
+        isAvailable,
+        availabilityCalendar,
+        isFavorite: Boolean(isBookmarked),
+        // averageRating: reviewSummary.averageRating,
+        // totalReviews: reviewSummary.totalReviews,
+        // starCounts: reviewSummary.starCounts,
+        // reviews: reviewSummary.reviews,
+    };
 };
 
 const getCarsByHostFromDB = async (hostId: string) => {
@@ -297,6 +789,11 @@ export const CarServices = {
     createCarToDB,
     getAllCarsFromDB,
     getCarByIdFromDB,
+    getAvailability,
+    createCarBlockedDatesToDB,
+    generateBlockedResponse,
+    getBookingBlockedHours,
+    getCarByIdForUserFromDB,
     updateCarByIdToDB,
     deleteCarByIdFromDB,
     getNearbyCarsFromDB,

@@ -57,6 +57,8 @@ export interface ICar {
   hourlyPrice?: number;
   minimumTripDuration: number; // in hours
   withDriver: boolean;
+  country?: string;
+  state?: string;
   city: string;
   pickupPoint: {
     type: "Point";
