@@ -51,6 +51,10 @@ const bookingSchema = new Schema<IBooking>(
             type: Boolean,
             default: false
         },
+        isSelfBooking: {
+            type: Boolean,
+            default: false
+        },
         fromDate: {
             type: Date,
             required: true

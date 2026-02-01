@@ -1,6 +1,7 @@
 import { User } from "../app/modules/user/user.model";
 import { USER_ROLES } from "../enums/user";
 import { Car } from "../app/modules/car/car.model";
+import { Booking } from "../app/modules/booking/booking.model";
 
 // Find the last created host's membershipId
 const findLastMembershipId = async () => {
@@ -72,3 +73,38 @@ export const generateVehicleId = async () => {
   return `VEH-${currentYear}-${currentId}`;
 };
 
+
+// Find the last created booking's bookingId
+const findLastBookingId = async () => {
+  const lastBooking = await Booking.findOne(
+    {},
+    { bookingId: 1, _id: 0 }
+  )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return lastBooking?.bookingId || null;
+};
+
+// Generate new booking ID
+// Format: BKG-2026-0001
+export const generateBookingId = async () => {
+  const currentYear = new Date().getUTCFullYear().toString();
+
+  let currentId = '0000'; // default
+
+  const lastBookingId = await findLastBookingId();
+
+  if (lastBookingId) {
+    // lastBookingId = "BKG-2026-0001"
+    const [, lastYear, lastNumber] = lastBookingId.split('-');
+
+    if (lastYear === currentYear) {
+      currentId = (Number(lastNumber) + 1)
+        .toString()
+        .padStart(4, '0');
+    }
+  }
+
+  return `BKG-${currentYear}-${currentId}`;
+};

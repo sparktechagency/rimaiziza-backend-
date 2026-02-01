@@ -24,6 +24,7 @@ export interface IBooking {
     drivingLicenseBackPic?: string;
     isCanceledByUser?: boolean;
     isCanceledByHost?: boolean;
+    isSelfBooking?: boolean;
     fromDate: Date;
     toDate: Date;
     extendedHours?: number; // total hours extended

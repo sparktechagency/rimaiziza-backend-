@@ -37,7 +37,6 @@ const toggleFavorite = async (payload: {
 };
 
 
-
 const getFavorite = async (userId: string) => {
   const favorites = await FavoriteCar.find({ userId })
     .populate({
@@ -67,7 +66,7 @@ const finalFavorites = await Promise.all(
     const carId = fav.referenceId?._id?.toString();
     if (!carId) return fav;
 
-    // এখন review system dual, reviewType = HOST
+    // review system dual, reviewType = HOST
     const reviewSummary =
       await ReviewServices.getReviewSummary(
         fav.referenceId.userId.toString(), // hostId

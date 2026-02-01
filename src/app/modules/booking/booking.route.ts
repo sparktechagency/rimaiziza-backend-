@@ -1,0 +1,36 @@
+import express from "express";
+import { BookingControllers } from "./booking.controller";
+import auth from "../../middlewares/auth";
+import { USER_ROLES } from "../../../enums/user";
+import fileUploadHandler from "../../middlewares/fileUploaderHandler";
+import parseAllFilesData from "../../middlewares/parseAllFileData";
+
+const router = express.Router();
+
+router.route("/")
+    .post(
+        auth(USER_ROLES.USER, USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+        fileUploadHandler(),
+        parseAllFilesData(
+            { fieldName: "nidFrontPic", forceSingle: true },
+            { fieldName: "nidBackPic", forceMultiple: true },
+            { fieldName: "drivingLicenseFrontPic", forceMultiple: true },
+            { fieldName: "drivingLicenseBackPic", forceMultiple: true },
+        ),
+        BookingControllers.createBookingToDB,
+    );
+
+router.route("/host")
+    .get(
+        auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+        BookingControllers.getHostBookings,
+    );
+
+router.route("/user")
+    .get(
+        auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+        BookingControllers.getUserBookings,
+    );
+
+
+export const BookingRoutes = router;
