@@ -63,7 +63,7 @@ export const validateAvailabilityStrictForApproval = async (
     }, {});
 
     for (const [date, hours] of Object.entries(dateMap)) {
-        // 🚫 blocked date
+        //  blocked date
         const blocked = car.blockedDates?.find(
             (b: any) => new Date(b.date).toISOString().split("T")[0] === date
         );
@@ -71,7 +71,7 @@ export const validateAvailabilityStrictForApproval = async (
             throw new ApiError(400, `Car blocked on ${date}`);
         }
 
-        // 📅 available day
+        // available day
         const dayName = new Date(date)
             .toLocaleDateString("en-US", { weekday: "long" })
             .toUpperCase() as AVAILABLE_DAYS;
@@ -80,7 +80,7 @@ export const validateAvailabilityStrictForApproval = async (
             throw new ApiError(400, `Car not available on ${date}`);
         }
 
-        // 🕒 open hours
+        //  open hours
         const openHours = new Set<number>();
         if (car.availableHours?.length) {
             car.availableHours.forEach(t => openHours.add(parseInt(t.split(":")[0])));
@@ -92,7 +92,7 @@ export const validateAvailabilityStrictForApproval = async (
             for (let h = 0; h < 24; h++) openHours.add(h);
         }
 
-        // 🔍 conflict bookings (excluding current)
+        //  conflict bookings (excluding current)
         const bookings = await Booking.find({
             carId,
             _id: { $ne: ignoreBookingId },

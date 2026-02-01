@@ -52,6 +52,18 @@ const approveBookingByHost = catchAsync(async (req, res) => {
     });
 })
 
+const confirmBookingAfterPayment = catchAsync(async (req, res) => {
+    const { id: userId } = req.user as { id: string };
+    const { bookingId } = req.params;
+    const result = await BookingServices.confirmBookingAfterPaymentFromDB(bookingId, userId);
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Booking confirmed successfully",
+        data: result,
+    });
+})
+
 
 
 export const BookingControllers = {
@@ -59,4 +71,5 @@ export const BookingControllers = {
     getHostBookings,
     getUserBookings,
     approveBookingByHost,
+    confirmBookingAfterPayment,
 }

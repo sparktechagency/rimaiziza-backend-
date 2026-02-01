@@ -167,7 +167,7 @@ const approveBookingByHostFromDB = async (
 ) => {
     const booking = await Booking.findById(bookingId);
 
-    console.log(bookingId,"BookingId")
+    console.log(bookingId, "BookingId")
 
     if (!booking) throw new ApiError(404, "Booking not found");
 
@@ -196,9 +196,44 @@ const approveBookingByHostFromDB = async (
     return booking;
 };
 
+const confirmBookingAfterPaymentFromDB = async (
+    bookingId: string,
+    userId: string,
+) => {
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking || booking.bookingStatus !== BOOKING_STATUS.PENDING) {
+        throw new ApiError(400, "Invalid booking state");
+    }
+
+    //  Ownership validation
+    if (!booking.userId.equals(userId)) {
+        throw new ApiError(403, "Unauthorized booking confirmation");
+    }
+
+    if (booking.isSelfBooking) {
+        throw new ApiError(400, "Self booking does not require payment");
+    }
+
+
+    // Re-check availability (race condition safe)
+    await validateAvailabilityStrict(
+        booking.carId.toString(),
+        booking.fromDate,
+        booking.toDate
+    );
+
+    // Confirm
+    booking.bookingStatus = BOOKING_STATUS.CONFIRMED;
+
+    await booking.save();
+    return booking;
+};
+
 export const BookingServices = {
     createBookingToDB,
     getHostBookingsFromDB,
     getUserBookingsFromDB,
     approveBookingByHostFromDB,
+    confirmBookingAfterPaymentFromDB,
 }
