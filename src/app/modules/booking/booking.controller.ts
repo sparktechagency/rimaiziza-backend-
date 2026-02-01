@@ -39,10 +39,24 @@ const getUserBookings = catchAsync(async (req, res) => {
     });
 });
 
+const approveBookingByHost = catchAsync(async (req, res) => {
+    const { id: hostId } = req.user as { id: string };
+    const { bookingId } = req.params;
+    console.log(bookingId, "BookingId")
+    const result = await BookingServices.approveBookingByHostFromDB(bookingId, hostId);
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Booking approved successfully",
+        data: result,
+    });
+})
+
 
 
 export const BookingControllers = {
     createBookingToDB,
     getHostBookings,
     getUserBookings,
+    approveBookingByHost,
 }

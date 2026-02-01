@@ -5,7 +5,7 @@ import { Car } from "../car/car.model";
 import { validateAvailabilityStrict } from "../car/car.utils";
 import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
-import { calculateFirstTimeBookingAmount } from "./booking.utils";
+import { calculateFirstTimeBookingAmount, validateAvailabilityStrictForApproval } from "./booking.utils";
 
 // self booking ta bad ase, booking calculation
 const createBookingToDB = async (payload: any, userId: string) => {
@@ -161,8 +161,44 @@ const getUserBookingsFromDB = async (
     };
 };
 
+const approveBookingByHostFromDB = async (
+    bookingId: string,
+    hostId: string
+) => {
+    const booking = await Booking.findById(bookingId);
+
+    console.log(bookingId,"BookingId")
+
+    if (!booking) throw new ApiError(404, "Booking not found");
+
+    if (!booking.hostId.equals(hostId)) {
+        throw new ApiError(403, "Unauthorized");
+    }
+
+    if (booking.bookingStatus !== BOOKING_STATUS.REQUESTED) {
+        throw new ApiError(400, "Invalid booking state");
+    }
+
+    /**
+     * 🔒 STRICT re-validation before approve
+     * Ignore current booking itself
+     */
+    await validateAvailabilityStrictForApproval(
+        booking.carId.toString(),
+        booking.fromDate,
+        booking.toDate,
+        booking._id.toString()
+    );
+
+    booking.bookingStatus = BOOKING_STATUS.PENDING;
+    await booking.save();
+
+    return booking;
+};
+
 export const BookingServices = {
     createBookingToDB,
     getHostBookingsFromDB,
     getUserBookingsFromDB,
+    approveBookingByHostFromDB,
 }

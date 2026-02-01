@@ -24,7 +24,16 @@ router.route("/host")
     .get(
         auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
         BookingControllers.getHostBookings,
+    )
+
+
+router.route("/host/:bookingId")
+    .patch(
+        auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+        BookingControllers.approveBookingByHost,
     );
+
+
 
 router.route("/user")
     .get(

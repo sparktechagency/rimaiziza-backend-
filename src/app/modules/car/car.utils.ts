@@ -147,7 +147,7 @@ export const getCarTripCountMap = async (
   return map;
 };
 
-const getLocalDetails = (date: Date) => {
+export const getLocalDetails = (date: Date) => {
   // Use System Local Time
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
