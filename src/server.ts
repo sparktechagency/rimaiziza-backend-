@@ -6,8 +6,7 @@ import colors from "colors";
 import { socketHelper } from "./helpers/socketHelper";
 import { Server } from "socket.io";
 import seedSuperAdmin from "./DB";
-import redisClient from "./shared/redisClient";
-
+import './app/modules/booking/booking.cron';
 //uncaught exception
 process.on("uncaughtException", (error) => {
   errorLogger.error("uncaughtException Detected", error);

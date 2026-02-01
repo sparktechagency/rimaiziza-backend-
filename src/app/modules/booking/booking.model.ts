@@ -76,6 +76,9 @@ const bookingSchema = new Schema<IBooking>(
             enum: Object.values(BOOKING_STATUS),
             default: BOOKING_STATUS.REQUESTED,
         },
+        checkedInAt: {
+            type: Date
+        },
         checkedOutAt: {
             type: Date
         },

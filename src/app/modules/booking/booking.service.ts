@@ -230,10 +230,84 @@ const confirmBookingAfterPaymentFromDB = async (
     return booking;
 };
 
+const bookingStatusCronJob = async () => {
+  const now = new Date();
+
+  // ------------------ REQUESTED → ONGOING (Self Booking Only) ------------------
+  const requestedBookings = await Booking.find({
+    bookingStatus: BOOKING_STATUS.REQUESTED,
+    isSelfBooking: true,
+    fromDate: { $lte: now },
+    isCanceledByHost: { $ne: true },
+    isCanceledByUser: { $ne: true },
+  });
+
+  for (const booking of requestedBookings) {
+    try {
+      // Strict availability check
+      await validateAvailabilityStrict(
+        booking.carId.toString(),
+        booking.fromDate,
+        booking.toDate
+      );
+
+      booking.bookingStatus = BOOKING_STATUS.ONGOING;
+      booking.checkedInAt = now;
+      await booking.save();
+      console.log(`Self booking ${booking._id} set to ONGOING`);
+    } catch (err: any) {
+      console.warn(`Cannot move self booking ${booking._id} to ONGOING:`, err.message);
+    }
+  }
+
+  // ------------------ CONFIRMED → ONGOING ------------------
+  const confirmedBookings = await Booking.find({
+    bookingStatus: BOOKING_STATUS.CONFIRMED,
+    fromDate: { $lte: now },
+    isCanceledByHost: { $ne: true },
+    isCanceledByUser: { $ne: true },
+  });
+
+  for (const booking of confirmedBookings) {
+    try {
+      if (booking.fromDate <= now && booking.toDate > now) {
+        booking.bookingStatus = BOOKING_STATUS.ONGOING;
+        booking.checkedInAt = now;
+        await booking.save();
+        console.log(`Booking ${booking._id} CONFIRMED → ONGOING`);
+      }
+    } catch (err: any) {
+      console.warn(`Cannot move booking ${booking._id} to ONGOING:`, err.message);
+    }
+  }
+
+  // ------------------ ONGOING → COMPLETED ------------------
+  const ongoingBookings = await Booking.find({
+    bookingStatus: BOOKING_STATUS.ONGOING,
+    toDate: { $lte: now },
+    isCanceledByHost: { $ne: true },
+    isCanceledByUser: { $ne: true },
+  });
+
+  for (const booking of ongoingBookings) {
+    try {
+      if (booking.toDate <= now) {
+        booking.bookingStatus = BOOKING_STATUS.COMPLETED;
+        booking.checkedOutAt = now;
+        await booking.save();
+        console.log(`Booking ${booking._id} ONGOING → COMPLETED`);
+      }
+    } catch (err: any) {
+      console.warn(`Cannot move booking ${booking._id} to COMPLETED:`, err.message);
+    }
+  }
+};
+
 export const BookingServices = {
     createBookingToDB,
     getHostBookingsFromDB,
     getUserBookingsFromDB,
     approveBookingByHostFromDB,
-    confirmBookingAfterPaymentFromDB,
+    confirmBookingAfterPaymentFromDB,   
+    bookingStatusCronJob,
 }

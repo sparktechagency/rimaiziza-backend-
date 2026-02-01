@@ -18,6 +18,7 @@ export default {
   redis_port: process.env.REDIS_PORT,
   redis_password: process.env.REDIS_PASSWORD,
   redis_db: process.env.REDIS_DB,
+  start_cron: process.env.START_CRON,
 
   // cinetpay: {
   //   CINATPAY_SITE_ID: process.env.CINATPAY_SITE_ID!,

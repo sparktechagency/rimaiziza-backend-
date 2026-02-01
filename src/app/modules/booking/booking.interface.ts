@@ -30,5 +30,6 @@ export interface IBooking {
     extendedHours?: number; // total hours extended
     totalAmount: number;
     bookingStatus: BOOKING_STATUS;
+    checkedInAt?: Date;
     checkedOutAt?: Date;
 }
