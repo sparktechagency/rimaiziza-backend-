@@ -13,6 +13,7 @@ import { Booking } from "../booking/booking.model";
 import { BOOKING_STATUS } from "../booking/booking.interface";
 import { ReviewServices } from "../review/review.service";
 import { IReviewSummary, REVIEW_TARGET_TYPE } from "../review/review.interface";
+import QueryBuilder from "../../builder/queryBuilder";
 
 const createCarToDB = async (payload: ICar) => {
 
@@ -39,15 +40,29 @@ const createCarToDB = async (payload: ICar) => {
     }
 };
 
-const getAllCarsFromDB = async () => {
-    const result = await Car.find();
-    if (!result.length) {
+const getAllCarsFromDB = async (query: any) => {
+
+    const baseQuery = Car.find();
+
+    const queryBuilder = new QueryBuilder(baseQuery, query).search(["vehicleId", "brand", "model", "licensePlate"]).sort().paginate();
+
+    const cars = await queryBuilder.modelQuery;
+
+    if (!cars.length) {
         throw new ApiError(404, "No cars found");
     }
-    return result;
+
+    const meta = await queryBuilder.countTotal();
+
+    return {
+        meta,
+        cars
+    }
+
 }
 
 const getCarByIdFromDB = async (id: string) => {
+
     const result = await Car.findById(id);
     if (!result) {
         throw new ApiError(404, "Car not found");

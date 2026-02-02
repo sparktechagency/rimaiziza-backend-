@@ -7,7 +7,7 @@ import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
 import { calculateFirstTimeBookingAmount, validateAvailabilityStrictForApproval } from "./booking.utils";
 
-// self booking ta bad ase, booking calculation
+// booking extend baki ase, r cancel baki ase
 const createBookingToDB = async (payload: any, userId: string) => {
     await validateAvailabilityStrict(
         payload.carId,
@@ -242,6 +242,7 @@ const bookingStatusCronJob = async () => {
     isCanceledByUser: { $ne: true },
   });
 
+
   for (const booking of requestedBookings) {
     try {
       // Strict availability check
@@ -302,6 +303,8 @@ const bookingStatusCronJob = async () => {
     }
   }
 };
+
+
 
 export const BookingServices = {
     createBookingToDB,
