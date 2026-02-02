@@ -140,7 +140,8 @@ const getAllHosts = catchAsync(async (req, res) => {
     success: true,
     statusCode: 200,
     message: "Successfully retrieved are hosts data",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 
@@ -218,7 +219,8 @@ const getAllUsers = catchAsync(async (req, res) => {
     success: true,
     statusCode: 200,
     message: "Successfully retrieved are users data",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

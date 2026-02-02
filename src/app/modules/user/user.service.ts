@@ -176,11 +176,14 @@ const getAllHostFromDB = async (query: any) => {
     { $match: { _id: { $in: hostIds } } },
     {
       $lookup: {
-        from: "cars", // MongoDB collection name for Car
+        from: "cars",
         let: { hostId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $in: ["$$hostId", "$assignedHosts"] } } },
-          { $project: { assignedHosts: 0 } }, // optional, remove assignedHosts
+          {
+            $match: {
+              $expr: { $eq: ["$assignedHost", "$$hostId"] },
+            },
+          },
         ],
         as: "vehicles",
       },
@@ -212,7 +215,7 @@ const getHostByIdFromDB = async (id: string) => {
         let: { hostId: "$_id" },
         pipeline: [
           {
-            $match: { 
+            $match: {
               $expr: { $in: ["$$hostId", "$assignedHosts"] },
             },
           },
