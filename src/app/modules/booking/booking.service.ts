@@ -6,8 +6,11 @@ import { validateAvailabilityStrict } from "../car/car.utils";
 import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
 import { calculateFirstTimeBookingAmount, validateAvailabilityStrictForApproval } from "./booking.utils";
+import { Transaction } from "../transaction/transaction.model";
+import { TRANSACTION_TYPE } from "../transaction/transaction.interface";
+import stripe from "../../../config/stripe";
 
-// booking extend baki ase, r cancel baki ase
+// booking extend baki ase, stripe integrate, r cancel baki ase
 const createBookingToDB = async (payload: any, userId: string) => {
     await validateAvailabilityStrict(
         payload.carId,
@@ -302,6 +305,40 @@ const bookingStatusCronJob = async () => {
       console.warn(`Cannot move booking ${booking._id} to COMPLETED:`, err.message);
     }
   }
+};
+
+const createBookingPaymentSession = async (bookingId: string, userId: string) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) throw new Error("Booking not found");
+  if (booking.bookingStatus !== "PENDING") throw new Error("Booking not payable");
+
+  const transaction = await Transaction.create({
+    bookingId: booking._id,
+    userId,
+    amount: booking.totalAmount,
+    type: TRANSACTION_TYPE.BOOKING,
+  });
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    line_items: [{
+      price_data: {
+        currency: process.env.CURRENCY!,
+        product_data: { name: `Booking ${booking.bookingId}` },
+        unit_amount: booking.totalAmount * 100,
+      },
+      quantity: 1,
+    }],
+    metadata: { transactionId: transaction._id.toString(), bookingId: booking._id.toString() },
+    success_url: `${process.env.CLIENT_URL}/payment-success`,
+    cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,
+  });
+
+  transaction.stripeSessionId = session.id;
+  await transaction.save();
+
+  return session.url;
 };
 
 

@@ -18,6 +18,15 @@ import { BookingRoutes } from "../modules/booking/booking.route";
 
 const router = express.Router();
 
+// {
+//   "arrayAction": {
+//     "field": "assignedHosts",
+//     "action": "DELETE",
+//     "value": "64e123abcd4567890f123456"
+//   }
+// }
+
+
 const apiRoutes = [
   {
     path: "/users",

@@ -780,7 +780,7 @@ const getNearbyCarsFromDB = async (params: any) => {
 };
 
 const getCarByIdForUserFromDB = async (id: string, userId: string) => {
-    const car = await Car.findById(id);
+    const car = await Car.findById(id)
 
     if (!car) {
         return null;

@@ -64,6 +64,14 @@ const userSchema = new Schema<IUser, UserModal>(
 
       },
     },
+    stripeConnectedAccountId: {
+      type: String,
+      required: false,
+    },
+    isStripeOnboarded: {
+      type: Boolean,
+      default: false,
+    },
     authentication: {
       type: {
         isResetPassword: {
@@ -139,7 +147,7 @@ userSchema.pre("save", async function (next) {
       );
     }
   } else {
-    
+
     if (this.isModified("password") && this.password) {
       this.password = await bcrypt.hash(
         this.password,
