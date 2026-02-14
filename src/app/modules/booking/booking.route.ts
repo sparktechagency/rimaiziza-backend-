@@ -33,6 +33,11 @@ router.route("/host/:bookingId")
         BookingControllers.approveBookingByHost,
     );
 
+router.route("/all")
+    .get(
+        auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+        BookingControllers.getAllBookings,
+    );
 
 
 router.route("/user")

@@ -64,6 +64,17 @@ const confirmBookingAfterPayment = catchAsync(async (req, res) => {
     });
 })
 
+const getAllBookings = catchAsync(async (req, res) => {
+    const result = await BookingServices.getAllBookingsFromDB(req.query);
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "All bookings fetched successfully",
+        data: result.bookings,
+        meta: result.meta,
+    });
+});
+
 
 
 export const BookingControllers = {
@@ -72,4 +83,5 @@ export const BookingControllers = {
     getUserBookings,
     approveBookingByHost,
     confirmBookingAfterPayment,
+    getAllBookings,
 }

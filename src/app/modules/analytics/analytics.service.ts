@@ -277,9 +277,62 @@ const getUserStats = async () => {
   
 };
 
+const getBookingSummary = async () => {
+  
+    const bookingAgg = await Booking.aggregate([
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "transactionId",
+          foreignField: "_id",
+          as: "transaction",
+        },
+      },
+      { $unwind: { path: "$transaction", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: null,
+          totalBookings: {
+            $sum: {
+              $cond: [
+                { $and: [{ $ne: ["$bookingStatus", BOOKING_STATUS.CANCELLED] }, { $eq: ["$transaction.status", TRANSACTION_STATUS.SUCCESS] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          ongoingBookings: {
+            $sum: {
+              $cond: [{ $eq: ["$bookingStatus", BOOKING_STATUS.ONGOING] }, 1, 0],
+            },
+          },
+          cancelledBookings: {
+            $sum: {
+              $cond: [{ $eq: ["$bookingStatus", BOOKING_STATUS.CANCELLED] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const stats = bookingAgg[0] || {
+      totalBookings: 0,
+      ongoingBookings: 0,
+      cancelledBookings: 0,
+    };
+
+    return {
+        totalBookings: stats.totalBookings,
+        ongoingBookings: stats.ongoingBookings,
+        cancelledBookings: stats.cancelledBookings,
+    };
+
+};
+
 export const AnalyticsServices={
     getDashboardStats,
     getYearlyRevenueChart,
     getYearlyBookingAndUserChart,
     getUserStats,
+    getBookingSummary,
 }

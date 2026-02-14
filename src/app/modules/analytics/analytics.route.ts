@@ -29,6 +29,12 @@ router.get(
   AnalyticsControllers.getUserStats,
 );
 
+router.get(
+  "/booking-summary",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AnalyticsControllers.getBookingSummary,
+);
+
 
 
 export const AnalyticsRoutes = router;

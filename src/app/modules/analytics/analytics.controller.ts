@@ -44,6 +44,16 @@ const getUserStats = catchAsync(async (req, res) => {
   });
 });
 
+const getBookingSummary = catchAsync(async (req, res) => {
+  const result = await AnalyticsServices.getBookingSummary();
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved booking summary",
+    data: result,
+  });
+});
+
 
 
 export const AnalyticsControllers = {
@@ -51,4 +61,5 @@ export const AnalyticsControllers = {
   getYearlyRevenueChart,
   getYearlyBookingAndUserChart,
   getUserStats,
+  getBookingSummary,
 }

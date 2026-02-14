@@ -21,6 +21,7 @@ const refundBooking = async (bookingId: string) => {
 };
 
 
+// akta missing ase, car theke deposite amount ta soho totalamount a calculate hobe, porobortite deposite amount ta ta k refund diye daoua hobe
 const createBookingPaymentSession = async (bookingId: string, userId: string) => {
     const booking = await Booking.findById(bookingId);
     if (!booking) throw new Error("Booking not found");
