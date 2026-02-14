@@ -13,6 +13,9 @@ import { emailTemplate } from "../../../shared/emailTemplate";
 import { emailHelper } from "../../../helpers/emailHelper";
 import { generateMembershipId } from "../../../helpers/generateYearBasedId";
 import { Types } from "mongoose";
+import { Booking } from "../booking/booking.model";
+import { BOOKING_STATUS } from "../booking/booking.interface";
+import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
 
 // --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
@@ -415,6 +418,7 @@ const switchProfileToDB = async (
 };
 
 const getAllUsersFromDB = async (query: any) => {
+  // Base user query
   const baseQuery = User.find({
     role: USER_ROLES.USER,
     status: STATUS.ACTIVE,
@@ -428,14 +432,60 @@ const getAllUsersFromDB = async (query: any) => {
     .filter()
     .paginate();
 
+  // Fetch paginated users
   const users = await queryBuilder.modelQuery;
-
   const meta = await queryBuilder.countTotal();
 
-  if (!users) throw new ApiError(404, "No users are found in the database");
+  if (!users || users.length === 0)
+    throw new ApiError(404, "No users are found in the database");
+
+  // Convert users to plain objects for aggregation join
+  const userIds = users.map(u => u._id);
+
+  // Aggregate bookings per user
+  const bookingStats = await Booking.aggregate([
+    {
+      $match: {
+        userId: { $in: userIds },
+        bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+        transactionId: { $exists: true, $ne: null },
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "transactionId",
+        foreignField: "_id",
+        as: "transaction",
+      },
+    },
+    { $unwind: "$transaction" },
+    {
+      $match: {
+        "transaction.status": TRANSACTION_STATUS.SUCCESS,
+      },
+    },
+    {
+      $group: {
+        _id: "$userId",
+        totalBookings: { $sum: 1 },
+        totalSpent: { $sum: "$transaction.amount" },
+      },
+    },
+  ]);
+
+  // Map booking stats to users
+  const usersWithStats = users.map(user => {
+    const stats = bookingStats.find(b => b._id.equals(user._id));
+    return {
+      ...user.toObject(),
+      bookingCount: stats?.totalBookings || 0,
+      totalSpent: stats?.totalSpent || 0,
+    };
+  });
 
   return {
-    data: users,
+    data: usersWithStats,
     meta,
   };
 };

@@ -23,6 +23,12 @@ router.get(
   AnalyticsControllers.getYearlyBookingAndUserChart,
 );
 
+router.get(
+  "/user-stats",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AnalyticsControllers.getUserStats,
+);
+
 
 
 export const AnalyticsRoutes = router;

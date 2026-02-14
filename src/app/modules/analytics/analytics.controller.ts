@@ -34,10 +34,21 @@ const getYearlyBookingAndUserChart = catchAsync(async (req, res) => {
   });
 });
 
+const getUserStats = catchAsync(async (req, res) => {
+  const result = await AnalyticsServices.getUserStats();
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved user stats",
+    data: result,
+  });
+});
+
 
 
 export const AnalyticsControllers = {
   getDashboardStats,
   getYearlyRevenueChart,
   getYearlyBookingAndUserChart,
+  getUserStats,
 }

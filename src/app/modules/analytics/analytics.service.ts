@@ -4,6 +4,7 @@ import { Booking } from "../booking/booking.model";
 import { Car } from "../car/car.model";
 import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
 import { User } from "../user/user.model";
+import { STATUS, USER_ROLES } from "../../../enums/user";
 
 const getDashboardStats = async () => {
   try {
@@ -224,8 +225,61 @@ const getYearlyBookingAndUserChart = async (year?: number) => {
   };
 };
 
+const getUserStats = async () => {
+ 
+    // Total Users
+    const totalUsers = await User.countDocuments({
+      role: USER_ROLES.USER,
+      status: STATUS.ACTIVE,
+      verified: true,
+    });
+
+      // Total Hosts
+    const totalHosts = await User.countDocuments({
+      role: USER_ROLES.HOST,
+      status: STATUS.ACTIVE,
+      verified: true,
+    });
+
+    // Total Customers (users with at least 1 successful booking)
+    const customersAgg = await Booking.aggregate([
+      {
+        $match: {
+          bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+          transactionId: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "transactionId",
+          foreignField: "_id",
+          as: "transaction",
+        },
+      },
+      { $unwind: "$transaction" },
+      { $match: { "transaction.status": TRANSACTION_STATUS.SUCCESS } },
+      {
+        $group: {
+          _id: "$userId",
+        },
+      },
+      { $count: "totalCustomers" },
+    ]);
+
+    const totalCustomers = customersAgg[0]?.totalCustomers || 0;
+
+    return {
+        totalUsers,
+        totalHosts,
+        totalCustomers,
+    };
+  
+};
+
 export const AnalyticsServices={
     getDashboardStats,
     getYearlyRevenueChart,
     getYearlyBookingAndUserChart,
+    getUserStats,
 }
