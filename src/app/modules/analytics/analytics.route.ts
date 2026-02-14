@@ -17,6 +17,12 @@ router.get(
   AnalyticsControllers.getYearlyRevenueChart,
 );
 
+router.get(
+  "/yearly-booking-user-chart",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AnalyticsControllers.getYearlyBookingAndUserChart,
+);
+
 
 
 export const AnalyticsRoutes = router;

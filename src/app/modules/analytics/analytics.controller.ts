@@ -23,7 +23,21 @@ const getYearlyRevenueChart = catchAsync(async (req, res) => {
   });
 });
 
+const getYearlyBookingAndUserChart = catchAsync(async (req, res) => {
+  const { year } = req.query;
+  const result = await AnalyticsServices.getYearlyBookingAndUserChart(Number(year));
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved yearly booking and user chart",
+    data: result,
+  });
+});
+
+
+
 export const AnalyticsControllers = {
   getDashboardStats,
   getYearlyRevenueChart,
+  getYearlyBookingAndUserChart,
 }

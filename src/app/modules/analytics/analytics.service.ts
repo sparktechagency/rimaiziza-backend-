@@ -1,6 +1,9 @@
+import { PipelineStage } from "mongoose";
 import { BOOKING_STATUS } from "../booking/booking.interface";
 import { Booking } from "../booking/booking.model";
 import { Car } from "../car/car.model";
+import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
+import { User } from "../user/user.model";
 
 const getDashboardStats = async () => {
   try {
@@ -101,7 +104,7 @@ const getDashboardStats = async () => {
       { $unwind: "$transaction" },
       {
         $match: {
-          "transaction.status": "SUCCESS",
+          "transaction.status": TRANSACTION_STATUS.SUCCESS,
           "transaction.createdAt": { $gte: start, $lte: end },
         },
       },
@@ -143,7 +146,86 @@ const getDashboardStats = async () => {
   
 };
 
+
+const getYearlyBookingAndUserChart = async (year?: number) => {
+  const targetYear = year || new Date().getUTCFullYear();
+  const start = new Date(`${targetYear}-01-01T00:00:00.000Z`);
+  const end = new Date(`${targetYear}-12-31T23:59:59.999Z`);
+
+  // Pipeline for bookings (exclude cancelled + successful transaction only)
+  const bookingPipeline: PipelineStage[] = [
+    {
+      $match: {
+        bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+        transactionId: { $exists: true, $ne: null },
+      },
+    },
+    {
+      $lookup: {
+        from: "transactions",
+        localField: "transactionId",
+        foreignField: "_id",
+        as: "transaction",
+      },
+    },
+    { $unwind: "$transaction" },
+    {
+      $match: {
+        "transaction.status": TRANSACTION_STATUS.SUCCESS,
+        "transaction.createdAt": { $gte: start, $lte: end },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$transaction.createdAt" },
+        totalBookings: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id": 1 as const } },
+  ];
+
+  // Users pipeline (all created users)
+  const userPipeline: PipelineStage[] = [
+    {
+      $match: {
+        createdAt: { $gte: start, $lte: end },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        totalUsers: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id": 1 as const } },
+  ];
+
+  const [bookingResult, userResult] = await Promise.all([
+    Booking.aggregate(bookingPipeline),
+    User.aggregate(userPipeline),
+  ]);
+
+  // Map to 12 months (1-12) numeric
+  const chartData = Array.from({ length: 12 }, (_, i) => {
+    const monthIndex = i + 1;
+    const bookingMonth = bookingResult.find(r => r._id === monthIndex);
+    const userMonth = userResult.find(r => r._id === monthIndex);
+
+    return {
+      month: monthIndex,
+      bookings: bookingMonth ? bookingMonth.totalBookings : 0,
+      users: userMonth ? userMonth.totalUsers : 0,
+    };
+  });
+
+  return {
+    year: targetYear,
+    data: chartData,
+  };
+};
+
 export const AnalyticsServices={
     getDashboardStats,
     getYearlyRevenueChart,
+    getYearlyBookingAndUserChart,
 }
