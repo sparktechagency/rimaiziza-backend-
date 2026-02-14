@@ -310,7 +310,7 @@ const bookingStatusCronJob = async () => {
 const createBookingPaymentSession = async (bookingId: string, userId: string) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) throw new Error("Booking not found");
-  if (booking.bookingStatus !== "PENDING") throw new Error("Booking not payable");
+  if (booking.bookingStatus !== BOOKING_STATUS.PENDING) throw new Error("Booking not payable");
 
   const transaction = await Transaction.create({
     bookingId: booking._id,

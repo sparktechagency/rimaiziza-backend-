@@ -93,7 +93,7 @@ const getAllChatsFromDB = async (
 
     const filteredChats = allChatLists.filter((chat) => {
       return chat.participants.some((participant) =>
-        participant.firstName.toLowerCase().includes(searchTerm),
+        participant.name.toLowerCase().includes(searchTerm),
       );
     });
 

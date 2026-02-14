@@ -29,20 +29,15 @@ const createCarToDB = async (payload: ICar) => {
         });
     }
 
-    try {
+ 
         const result = await Car.create(payload);
         return result;
-    } catch (error: any) {
-        if (error.code === 11000) {
-            throw new ApiError(400, "Car with this license plate already exists");
-        }
-        throw new ApiError(error.statusCode || 500, error.message || "Failed to create a car");
-    }
+   
 };
 
 const getAllCarsFromDB = async (query: any) => {
 
-    const baseQuery = Car.find();
+    const baseQuery = Car.find().populate("assignedHosts", "name email role profileImage membershipId");
 
     const queryBuilder = new QueryBuilder(baseQuery, query).search(["vehicleId", "brand", "model", "licensePlate"]).sort().paginate();
 
@@ -407,6 +402,7 @@ const createCarBlockedDatesToDB = async (
     carId: string,
     payload: IBlockedDate[],
 ) => {
+
 
 
     // Ensure car belongs to this host

@@ -7,62 +7,92 @@ import { Transaction } from "../../app/modules/transaction/transaction.model";
 import { User } from "../../app/modules/user/user.model";
 import stripe from "../../config/stripe";
 
-export const stripeWebhook = async (req: any, res: any) => {
+/** Helper: Handle checkout.session.completed */
+const handleCheckoutSessionCompleted = async (session: any) => {
+    const transaction = await Transaction.findById(session.metadata.transactionId);
+    if (!transaction) return;
+
+    transaction.status = TRANSACTION_STATUS.SUCCESS;
+    transaction.stripePaymentIntentId = session.payment_intent;
+    await transaction.save();
+
+    await Booking.findByIdAndUpdate(transaction.bookingId, {
+        bookingStatus: BOOKING_STATUS.CONFIRMED,
+        transactionId: transaction._id,
+    });
+
+    console.log(`✅ Transaction ${transaction._id} confirmed, booking updated`);
+};
+
+/** Helper: Handle transfer.paid */
+const handleTransferPaid = async (transfer: any) => {
+    const payout = await Payout.findOne({ stripeTransferId: transfer.id });
+    if (!payout) return;
+
+    payout.status = PAYOUT_STATUS.PAID;
+    payout.paidAt = new Date(transfer.created * 1000);
+    await payout.save();
+
+    console.log(`✅ Payout ${payout._id} marked as PAID`);
+};
+
+/** Helper: Handle account.updated */
+const handleAccountUpdated = async (account: any) => {
+    console.log("Webhook received: account.updated");
+
+    if (account.charges_enabled && account.requirements?.currently_due?.length === 0) {
+        // Atomic update, idempotent
+        const host = await User.findOneAndUpdate(
+            { stripeConnectedAccountId: account.id, isStripeOnboarded: false },
+            { isStripeOnboarded: true },
+            { new: true }
+        );
+
+        if (host) console.log(`✅ Host onboarded: ${host._id}`);
+        else console.log("No host found to update or already onboarded");
+    } else {
+        console.log("Account not ready for onboarding:", {
+            charges_enabled: account.charges_enabled,
+            currently_due: account.requirements?.currently_due,
+        });
+    }
+};
+
+/** Main Stripe webhook handler */
+export const handleStripeWebhook = async (req: any, res: any) => {
     const sig = req.headers["stripe-signature"];
-    let event;
+    let event: any;
+
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+        event = stripe.webhooks.constructEvent(
+            req.body,
+            sig,
+            process.env.STRIPE_WEBHOOK_SECRET!
+        );
     } catch (err: any) {
-        console.error("Webhook signature verification failed.", err.message);
+        console.error("Webhook signature verification failed:", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    switch (event.type as any) {
-        case "checkout.session.completed": {
-            const session: any = event.data.object;
-            const transaction = await Transaction.findById(session.metadata.transactionId);
-            if (!transaction) break;
+    try {
+        switch (event.type) {
+            case "checkout.session.completed":
+                await handleCheckoutSessionCompleted(event.data.object);
+                break;
 
-            transaction.status = TRANSACTION_STATUS.SUCCESS;
-            transaction.stripePaymentIntentId = session.payment_intent;
-            await transaction.save();
+            case "transfer.paid":
+                await handleTransferPaid(event.data.object);
+                break;
 
-            await Booking.findByIdAndUpdate(transaction.bookingId, {
-                bookingStatus: BOOKING_STATUS.CONFIRMED,
-                transactionId: transaction._id,
-            });
-            break;
+            case "account.updated":
+                await handleAccountUpdated(event.data.object);
+                break;
+
+            default:
+                console.log("Unhandled Stripe event type:", event.type);
         }
-
-        case "transfer.paid": {
-            const transfer: any = event.data.object;
-
-            const payout = await Payout.findOne({
-                stripeTransferId: transfer.id,
-            });
-
-            if (!payout) break;
-
-            payout.status = PAYOUT_STATUS.PAID;
-            payout.paidAt = new Date(transfer.created * 1000);
-            await payout.save();
-
-            break;
-        }
-
-
-        case "account.updated": {
-            const account: any = event.data.object;
-            if (account.charges_enabled && account.requirements.currently_due.length === 0) {
-                const host = await User.findOne({ stripeConnectedAccountId: account.id });
-                if (host && !host.isStripeOnboarded) {
-                    host.isStripeOnboarded = true;
-                    await host.save();
-                    console.log(`Host onboarding complete: ${host._id}`);
-                }
-            }
-            break;
-        }
+    } catch (err) {
+        console.error("Error processing Stripe webhook:", err);
     }
 
     res.json({ received: true });

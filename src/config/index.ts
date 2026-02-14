@@ -19,6 +19,7 @@ export default {
   redis_password: process.env.REDIS_PASSWORD,
   redis_db: process.env.REDIS_DB,
   start_cron: process.env.START_CRON,
+  client_url: process.env.CLIENT_URL,
 
   // cinetpay: {
   //   CINATPAY_SITE_ID: process.env.CINATPAY_SITE_ID!,
@@ -28,9 +29,9 @@ export default {
   // },
 
   stripe: {
-    stripeSecretKey: process.env.STRIPE_API_SECRET!,
-    webhookSecret: process.env.WEBHOOK_SECRET!,
-    paymentSuccess: process.env.WEBHOOK_SECRET!,
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY!,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+    paymentSuccess: process.env.STRIPE_PAYMENT_SUCCESS!,
     BASE_URL: process.env.BASE_URL!,
   },
   email: {

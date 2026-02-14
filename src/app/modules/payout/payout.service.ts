@@ -1,4 +1,6 @@
+import config from "../../../config";
 import stripe from "../../../config/stripe";
+import { BOOKING_STATUS } from "../booking/booking.interface";
 import { Booking } from "../booking/booking.model";
 import { Charges } from "../charges/charges.model";
 import { User } from "../user/user.model";
@@ -9,9 +11,9 @@ import { Payout } from "./payout.model";
 const autoHostPayout = async (bookingId: string) => {
     const booking = await Booking.findById(bookingId);
     if (!booking) return;
-    if (booking.bookingStatus !== "COMPLETED") return;
+    if (booking.bookingStatus !== BOOKING_STATUS.COMPLETED) return;
 
-    // Prevent double payout
+    // prevent double payout
     const alreadyPaid = await Payout.findOne({ bookingId });
     if (alreadyPaid) return;
 
@@ -22,7 +24,6 @@ const autoHostPayout = async (bookingId: string) => {
 
     const charges = await Charges.findOne();
     if (!charges) return;
-
 
     const { hostAmount, adminAmount } = calculateFinalCharges(
         booking.totalAmount,
@@ -47,7 +48,6 @@ const autoHostPayout = async (bookingId: string) => {
         paidAt: new Date(),
     });
 };
-
 
 
 export const PayoutServices = {

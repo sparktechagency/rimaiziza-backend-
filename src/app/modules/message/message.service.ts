@@ -90,7 +90,7 @@ const sendMessageToDB = async (payload: IMessage): Promise<IMessage> => {
         chatId: payload.chatId,
         action: "increment", // frontend should increment its local count
       });
-
+      
       // emit chat list update to move this chat to top
       io.emit(`chatListUpdate::${participantIdStr}`, {
         chatId: payload.chatId,

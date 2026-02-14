@@ -84,14 +84,12 @@ const CarSchema = new Schema<ICar>(
     licensePlate: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
     },
     vin: {
       type: String,
       required: false,
-      unique: true,
       trim: true,
     },
     carRegistrationPaperFrontPic: {
@@ -263,11 +261,6 @@ const CarSchema = new Schema<ICar>(
 // 2dsphere index for location-based queries (e.g., find cars near me)
 CarSchema.index({ pickupPoint: "2dsphere" });
 
-// Compound index for common queries
-CarSchema.index({ userId: 1, isActive: 1 });
-CarSchema.index({ city: 1, isActive: 1 });
-CarSchema.index({ licensePlate: 1 });
-CarSchema.index({ vin: 1 });
 
 // Model
 export const Car = model<ICar>("Car", CarSchema);
