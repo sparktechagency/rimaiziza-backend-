@@ -11,6 +11,12 @@ router.get(
   AnalyticsControllers.getDashboardStats,
 );
 
+router.get(
+  "/yearly-revenue-chart",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AnalyticsControllers.getYearlyRevenueChart,
+);
+
 
 
 export const AnalyticsRoutes = router;

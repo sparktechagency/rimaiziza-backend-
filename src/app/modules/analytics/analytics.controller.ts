@@ -12,6 +12,18 @@ const getDashboardStats = catchAsync(async (req, res) => {
   });
 });
 
+const getYearlyRevenueChart = catchAsync(async (req, res) => {
+  const { year } = req.query;
+  const result = await AnalyticsServices.getYearlyRevenueChart(Number(year));
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved yearly revenue chart",
+    data: result,
+  });
+});
+
 export const AnalyticsControllers = {
-    getDashboardStats,
+  getDashboardStats,
+  getYearlyRevenueChart,
 }

@@ -76,6 +76,74 @@ const getDashboardStats = async () => {
   }
 };
 
+ const getYearlyRevenueChart = async (year?: number) => {
+ 
+    const currentYear = year || new Date().getUTCFullYear();
+
+    const start = new Date(`${currentYear}-01-01T00:00:00.000Z`);
+    const end = new Date(`${currentYear}-12-31T23:59:59.999Z`);
+
+    const chartData = await Booking.aggregate([
+      {
+        $match: {
+          bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+          transactionId: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "transactionId",
+          foreignField: "_id",
+          as: "transaction",
+        },
+      },
+      { $unwind: "$transaction" },
+      {
+        $match: {
+          "transaction.status": "SUCCESS",
+          "transaction.createdAt": { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$transaction.createdAt" },
+          totalRevenue: { $sum: "$transaction.amount" },
+          platformFee: { $sum: { $ifNull: ["$transaction.charges.platformFee", 0] } },
+          hostEarnings: { $sum: { $ifNull: ["$transaction.charges.hostCommission", 0] } },
+        },
+      },
+      {
+        $project: {
+          month: "$_id",
+          totalRevenue: 1,
+          platformFee: 1,
+          hostEarnings: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    // Fill missing months with 0
+    const result = Array.from({ length: 12 }, (_, i) => {
+      const monthData = chartData.find(d => d.month === i + 1);
+      return {
+        month: i + 1,
+        totalRevenue: monthData?.totalRevenue || 0,
+        platformFee: monthData?.platformFee || 0,
+        hostEarnings: monthData?.hostEarnings || 0,
+      };
+    });
+
+    return {
+      year: currentYear,
+      data: result,
+    };
+  
+};
+
 export const AnalyticsServices={
     getDashboardStats,
+    getYearlyRevenueChart,
 }
