@@ -7,21 +7,29 @@ import { Transaction } from "../../app/modules/transaction/transaction.model";
 import { User } from "../../app/modules/user/user.model";
 import stripe from "../../config/stripe";
 
+
+
+
+
 /** Helper: Handle checkout.session.completed */
-const handleCheckoutSessionCompleted = async (session: any) => {
+export const handleCheckoutSessionCompleted = async (session: any) => {
     const transaction = await Transaction.findById(session.metadata.transactionId);
     if (!transaction) return;
 
+    // Update transaction
     transaction.status = TRANSACTION_STATUS.SUCCESS;
     transaction.stripePaymentIntentId = session.payment_intent;
     await transaction.save();
 
-    await Booking.findByIdAndUpdate(transaction.bookingId, {
-        bookingStatus: BOOKING_STATUS.CONFIRMED,
-        transactionId: transaction._id,
-    });
+    // Atomic booking update (race condition safe)
+    const booking = await Booking.findOneAndUpdate(
+        { _id: transaction.bookingId, bookingStatus: BOOKING_STATUS.PENDING },
+        { bookingStatus: BOOKING_STATUS.CONFIRMED, transactionId: transaction._id },
+        { new: true }
+    );
 
-    console.log(`✅ Transaction ${transaction._id} confirmed, booking updated`);
+    if (booking) console.log(`✅ Booking ${booking._id} confirmed`);
+    else console.log(`⚠ Booking ${transaction.bookingId} already confirmed or invalid state`);
 };
 
 /** Helper: Handle transfer.paid */
@@ -97,3 +105,4 @@ export const handleStripeWebhook = async (req: any, res: any) => {
 
     res.json({ received: true });
 };
+

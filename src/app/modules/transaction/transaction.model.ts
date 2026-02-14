@@ -33,6 +33,20 @@ const transactionSchema = new Schema({
         enum: Object.values(TRANSACTION_STATUS),
         default: TRANSACTION_STATUS.INITIATED
     },
+    charges: {
+        platformFee: {
+            type: Number,
+            default: 0
+        },
+        hostCommission: {
+            type: Number,
+            default: 0
+        },
+        adminCommission: {
+            type: Number,
+            default: 0
+        }
+    }
 }, {
     timestamps: true,
     versionKey: false,

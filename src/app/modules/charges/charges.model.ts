@@ -12,6 +12,10 @@ export const chargesSchema = new Schema<TCharges>(
             type: Number,
             required: true,
         },
+        adminCommission: {
+            type: Number,
+            required: true,
+        },
     },
     {
         timestamps: true,

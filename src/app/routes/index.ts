@@ -16,6 +16,7 @@ import { BannerRoutes } from "../modules/banner/banner.route";
 import { ChargesRoutes } from "../modules/charges/charges.route";
 import { BookingRoutes } from "../modules/booking/booking.route";
 import { StripeRoutes } from "../modules/stripe/stripe.route";
+import { TransactionRoutes } from "../modules/transaction/transaction.route";
 
 const router = express.Router();
 
@@ -97,6 +98,10 @@ const apiRoutes = [
   {
     path: "/stripe",
     route: StripeRoutes,
+  },
+  {
+    path: "/transactions",
+    route: TransactionRoutes,
   },
 ];
 

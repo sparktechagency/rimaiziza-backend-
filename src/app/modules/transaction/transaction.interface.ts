@@ -25,4 +25,9 @@ export interface ITransaction {
     currency: string;
     type: TRANSACTION_TYPE;
     status: TRANSACTION_STATUS;
+    charges: {
+        platformFee: number;
+        hostCommission: number;
+        adminCommission: number;
+    };
 }

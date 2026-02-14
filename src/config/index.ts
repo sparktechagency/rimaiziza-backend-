@@ -33,6 +33,7 @@ export default {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
     paymentSuccess: process.env.STRIPE_PAYMENT_SUCCESS!,
     BASE_URL: process.env.BASE_URL!,
+    currency: process.env.CURRENCY!,
   },
   email: {
     from: process.env.EMAIL_FROM,
