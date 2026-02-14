@@ -1,119 +1,81 @@
-// import { PipelineStage } from "mongoose";
-// import { HOST_STATUS, STATUS, USER_ROLES } from "../../../enums/user";
-// import { CAR_VERIFICATION_STATUS } from "../car/car.interface";
-// import { Car } from "../car/car.model";
-// import { User } from "../user/user.model";
-// import { Booking } from "../booking/booking.model";
-// import Transaction from "../payment/transaction.model";
+import { BOOKING_STATUS } from "../booking/booking.interface";
+import { Booking } from "../booking/booking.model";
+import { Car } from "../car/car.model";
 
-// const statCountsFromDB = async () => {
-//   const [users, cars, bookings, revenue] = await Promise.all([
-//     User.countDocuments({
-//       verified: true,
-//       status: STATUS.ACTIVE,
-//       role: { $in: [USER_ROLES.HOST, USER_ROLES.USER] },
-//     }),
-//     Car.countDocuments({
-//       verificationStatus: CAR_VERIFICATION_STATUS.APPROVED,
-//     }),
-//     Booking.countDocuments({
-//       status: "paid",
-//       carStatus: "completed"
-//     }),
+const getDashboardStats = async () => {
+  try {
+    // Step 1: Aggregate bookings with transaction
+    // total revenue calculate without admin commission, thats mean exclude admin commission from revenue
+    const bookingAgg = await Booking.aggregate([
+      {
+        $match: {
+          bookingStatus: { $ne: BOOKING_STATUS.CANCELLED }, // exclude cancelled bookings
+          transactionId: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "transactionId",
+          foreignField: "_id",
+          as: "transaction",
+        },
+      },
+      { $unwind: "$transaction" },
+      {
+        $match: {
+          "transaction.status": "SUCCESS", // only successful payments
+        },
+      },
+      {
+        $addFields: {
+          revenue: {
+            $subtract: ["$transaction.amount", { $ifNull: ["$transaction.charges.adminCommission", 0] }],
+          },
+        },
+      },
+    ]);
 
-//     Transaction.aggregate([
-//       {
-//         $match: {
-//           status: "succeeded", // optional but recommended
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: null,
-//           totalCommission: { $sum: "$commissionAmount" },
-//         },
-//       },
-//     ]),
+    const totalRevenue = bookingAgg.reduce((acc, b) => acc + (b.revenue || 0), 0);
+    const totalBookings = bookingAgg.length;
 
-//   ]);
+    // Step 2: Active vehicles
+    const activeVehicles = await Car.countDocuments({ isActive: true });
 
-//   return {
-//     users,
-//     cars,
-//     bookings,
-//     revenue: revenue[0].totalCommission || 0
-//   };
-// };
+    // Step 3: Total unique customers
+    const totalCustomers = await Booking.aggregate([
+      {
+        $match: {
+          bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+          transactionId: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "transactionId",
+          foreignField: "_id",
+          as: "transaction",
+        },
+      },
+      { $unwind: "$transaction" },
+      { $match: { "transaction.status": "SUCCESS" } },
+      { $group: { _id: "$userId" } },
+      { $count: "totalCustomers" },
+    ]);
 
-// const getGuestHostYearlyChart = async (year?: number) => {
-//   const currentYear = new Date().getUTCFullYear();
-//   const targetYear = year || currentYear;
+    return {
+ 
+        totalRevenue,
+        totalBookings,
+        activeVehicles,
+        totalCustomers: totalCustomers[0]?.totalCustomers || 0,
+    };
+  } catch (error: any) {
+    throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
+  }
+};
 
-//   const startDate = new Date(Date.UTC(targetYear, 0, 1));
-//   const endDate = new Date(Date.UTC(targetYear + 1, 0, 1));
-
-//   const pipeline: PipelineStage[] = [
-//     {
-//       $match: {
-//         createdAt: { $gte: startDate, $lt: endDate },
-//         $or: [
-//           {
-//             role: USER_ROLES.USER,
-//             hostStatus: HOST_STATUS.NONE,
-//           },
-//           {
-//             hostStatus: HOST_STATUS.APPROVED,
-//           },
-//         ],
-//       },
-//     },
-//     {
-//       $group: {
-//         _id: {
-//           month: { $month: "$createdAt" },
-//           role: "$role",
-//         },
-//         total: { $sum: 1 },
-//       },
-//     },
-//     {
-//       $group: {
-//         _id: "$_id.month",
-//         data: {
-//           $push: {
-//             role: "$_id.role",
-//             total: "$total",
-//           },
-//         },
-//       },
-//     },
-//     {
-//       $sort: { _id: 1 as 1 },
-//     },
-//   ];
-
-//   const raw = await User.aggregate(pipeline);
-
-//   const chart = Array.from({ length: 12 }).map((_, i) => {
-//     const month = i + 1;
-//     const row = raw.find((r) => r._id === month);
-
-//     return {
-//       month,
-//       guest:
-//         row?.data?.find((d: any) => d.role === USER_ROLES.USER)?.total || 0,
-//       host: row?.data?.find((d: any) => d.role === USER_ROLES.HOST)?.total || 0,
-//     };
-//   });
-
-//   return {
-//     year: targetYear,
-//     chart,
-//   };
-// };
-
-
-// export const AnalyticsServices = {
-//   statCountsFromDB,
-//   getGuestHostYearlyChart,
-// };
+export const AnalyticsServices={
+    getDashboardStats,
+}

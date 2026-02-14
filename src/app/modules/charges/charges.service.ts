@@ -43,7 +43,7 @@ export const getDynamicCharges = async ({
      const hostPercent = normalize(charges.hostCommission);
      const adminPercent = normalize(charges.adminCommission);
 
-     // Validate total percent
+     // validate total percent
      const totalPercent = platformPercent + hostPercent + adminPercent;
 
      if (Math.abs(totalPercent - 1) > 0.0001) {
