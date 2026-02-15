@@ -20,8 +20,11 @@ export interface IBooking {
     transactionId?: Types.ObjectId;
     nidFrontPic?: string;
     nidBackPic?: string;
+    depositAmount?: number;
     drivingLicenseFrontPic?: string;
     drivingLicenseBackPic?: string;
+    isDepositRefunded?: boolean;
+    depositRefundableAt?: Date;
     isCanceledByUser?: boolean;
     isCanceledByHost?: boolean;
     isSelfBooking?: boolean;

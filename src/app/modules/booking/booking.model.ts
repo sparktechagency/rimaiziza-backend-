@@ -43,6 +43,18 @@ const bookingSchema = new Schema<IBooking>(
             type: String,
             required:false
         },
+        depositAmount: {
+            type: Number,
+            required: false
+        },
+        isDepositRefunded: {
+            type: Boolean,
+            default: false
+        },
+        depositRefundableAt: {
+            type: Date,
+            required: false
+        },
         isCanceledByUser: {
             type: Boolean,
             default: false

@@ -7,6 +7,7 @@ import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
 import { calculateFirstTimeBookingAmount, validateAvailabilityStrictForApproval } from "./booking.utils";
 import QueryBuilder from "../../builder/queryBuilder";
+import stripe from "../../../config/stripe";
 
 // booking extend baki ase, r cancel baki ase
 const createBookingToDB = async (payload: any, userId: string) => {
@@ -231,79 +232,139 @@ const confirmBookingAfterPaymentFromDB = async (
   return booking;
 };
 
-const bookingStatusCronJob = async () => {
-  const now = new Date();
+// const bookingStatusCronJob = async () => {
+//   const now = new Date();
 
-  // ------------------ REQUESTED → ONGOING (Self Booking Only) ------------------
-  const requestedBookings = await Booking.find({
-    bookingStatus: BOOKING_STATUS.REQUESTED,
-    isSelfBooking: true,
-    fromDate: { $lte: now },
-    isCanceledByHost: { $ne: true },
-    isCanceledByUser: { $ne: true },
-  });
+//   // ------------------ REQUESTED → ONGOING (Self Booking Only) ------------------
+//   const requestedBookings = await Booking.find({
+//     bookingStatus: BOOKING_STATUS.REQUESTED,
+//     isSelfBooking: true,
+//     fromDate: { $lte: now },
+//     isCanceledByHost: { $ne: true },
+//     isCanceledByUser: { $ne: true },
+//   });
 
+//   for (const booking of requestedBookings) {
+//     try {
+//       // Strict availability check
+//       await validateAvailabilityStrict(
+//         booking.carId.toString(),
+//         booking.fromDate,
+//         booking.toDate
+//       );
 
-  for (const booking of requestedBookings) {
-    try {
-      // Strict availability check
-      await validateAvailabilityStrict(
-        booking.carId.toString(),
-        booking.fromDate,
-        booking.toDate
-      );
+//       booking.bookingStatus = BOOKING_STATUS.ONGOING;
+//       booking.checkedInAt = now;
+//       await booking.save();
+//       console.log(`Self booking ${booking._id} set to ONGOING`);
+//     } catch (err: any) {
+//       console.warn(`Cannot move self booking ${booking._id} to ONGOING:`, err.message);
+//     }
+//   }
 
-      booking.bookingStatus = BOOKING_STATUS.ONGOING;
-      booking.checkedInAt = now;
-      await booking.save();
-      console.log(`Self booking ${booking._id} set to ONGOING`);
-    } catch (err: any) {
-      console.warn(`Cannot move self booking ${booking._id} to ONGOING:`, err.message);
-    }
-  }
+//   // ------------------ CONFIRMED → ONGOING ------------------
+//   const confirmedBookings = await Booking.find({
+//     bookingStatus: BOOKING_STATUS.CONFIRMED,
+//     fromDate: { $lte: now },
+//     isCanceledByHost: { $ne: true },
+//     isCanceledByUser: { $ne: true },
+//   });
 
-  // ------------------ CONFIRMED → ONGOING ------------------
-  const confirmedBookings = await Booking.find({
-    bookingStatus: BOOKING_STATUS.CONFIRMED,
-    fromDate: { $lte: now },
-    isCanceledByHost: { $ne: true },
-    isCanceledByUser: { $ne: true },
-  });
+//   for (const booking of confirmedBookings) {
+//     try {
+//       if (booking.fromDate <= now && booking.toDate > now) {
+//         booking.bookingStatus = BOOKING_STATUS.ONGOING;
+//         booking.checkedInAt = now;
+//         await booking.save();
+//         console.log(`Booking ${booking._id} CONFIRMED → ONGOING`);
+//       }
+//     } catch (err: any) {
+//       console.warn(`Cannot move booking ${booking._id} to ONGOING:`, err.message);
+//     }
+//   }
 
-  for (const booking of confirmedBookings) {
-    try {
-      if (booking.fromDate <= now && booking.toDate > now) {
-        booking.bookingStatus = BOOKING_STATUS.ONGOING;
-        booking.checkedInAt = now;
-        await booking.save();
-        console.log(`Booking ${booking._id} CONFIRMED → ONGOING`);
-      }
-    } catch (err: any) {
-      console.warn(`Cannot move booking ${booking._id} to ONGOING:`, err.message);
-    }
-  }
+//   // ------------------ ONGOING → COMPLETED ------------------
+//   const ongoingBookings = await Booking.find({
+//     bookingStatus: BOOKING_STATUS.ONGOING,
+//     toDate: { $lte: now },
+//     isCanceledByHost: { $ne: true },
+//     isCanceledByUser: { $ne: true },
+//   }).populate("transactionId");
 
-  // ------------------ ONGOING → COMPLETED ------------------
-  const ongoingBookings = await Booking.find({
-    bookingStatus: BOOKING_STATUS.ONGOING,
-    toDate: { $lte: now },
-    isCanceledByHost: { $ne: true },
-    isCanceledByUser: { $ne: true },
-  });
+//   for (const booking of ongoingBookings) {
+//     try {
+//       if (booking.toDate <= now) {
+//         booking.bookingStatus = BOOKING_STATUS.COMPLETED;
+//         booking.checkedOutAt = now;
 
-  for (const booking of ongoingBookings) {
-    try {
-      if (booking.toDate <= now) {
-        booking.bookingStatus = BOOKING_STATUS.COMPLETED;
-        booking.checkedOutAt = now;
-        await booking.save();
-        console.log(`Booking ${booking._id} ONGOING → COMPLETED`);
-      }
-    } catch (err: any) {
-      console.warn(`Cannot move booking ${booking._id} to COMPLETED:`, err.message);
-    }
-  }
-};
+//         // Deposit refundable date (3 days later)
+//         booking.depositRefundableAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+//         booking.isDepositRefunded = false;
+
+//         await booking.save();
+//         console.log(`Booking ${booking._id} ONGOING → COMPLETED`);
+//       }
+//     } catch (err: any) {
+//       console.warn(`Cannot move booking ${booking._id} to COMPLETED:`, err.message);
+//     }
+//   }
+
+//   // ------------------ REFUND DEPOSIT (3 days after COMPLETION) ------------------
+//   const refundableBookings = await Booking.find({
+//     bookingStatus: BOOKING_STATUS.COMPLETED,
+//     depositRefundableAt: { $lte: now },
+//     isDepositRefunded: { $ne: true },
+//   }).populate("transactionId").populate("carId"); // carId populate
+
+//   for (const booking of refundableBookings) {
+//     try {
+//       const car = booking.carId as any;
+//       if (!car || !car.depositAmount) continue; // deposit না থাকলে skip
+
+//       const transaction = booking.transactionId as any;
+//       if (!transaction || !transaction.stripePaymentIntentId) {
+//         console.warn(`Transaction not found for booking ${booking._id}`);
+//         continue;
+//       }
+
+//       // Refund deposit via Stripe
+//       await stripe.refunds.create({
+//         payment_intent: transaction.stripePaymentIntentId,
+//         amount: Math.round(car.depositAmount * 100), // Stripe expects cents
+//       });
+
+//       booking.isDepositRefunded = true;
+//       await booking.save();
+
+//       console.log(`Deposit refunded for booking ${booking._id}`);
+//     } catch (err: any) {
+//       console.error(`Failed to refund deposit for booking ${booking._id}:`, err.message);
+//     }
+//   }
+
+//   for (const booking of refundableBookings) {
+//     try {
+//       const transaction = booking.transactionId as any;
+//       if (!transaction || !transaction.stripePaymentIntentId) {
+//         console.warn(`Transaction not found for booking ${booking._id}`);
+//         continue;
+//       }
+
+//       // Refund deposit via Stripe
+//       await stripe.refunds.create({
+//         payment_intent: transaction.stripePaymentIntentId,
+//         amount: Math.round((booking.depositAmount || 0) * 100), // Stripe expects cents
+//       });
+
+//       booking.isDepositRefunded = true;
+//       await booking.save();
+
+//       console.log(`Deposit refunded for booking ${booking._id}`);
+//     } catch (err: any) {
+//       console.error(`Failed to refund deposit for booking ${booking._id}:`, err.message);
+//     }
+//   }
+// };
 
 
 const getAllBookingsFromDB = async (query: any) => {
@@ -314,30 +375,36 @@ const getAllBookingsFromDB = async (query: any) => {
 
   const aggregationPipeline: any[] = [
     // Lookup car
-    { $lookup: {
+    {
+      $lookup: {
         from: "cars",
         localField: "carId",
         foreignField: "_id",
         as: "car"
-    }},
+      }
+    },
     { $unwind: { path: "$car", preserveNullAndEmptyArrays: true } },
 
     // Lookup host
-    { $lookup: {
+    {
+      $lookup: {
         from: "users",
         localField: "hostId",
         foreignField: "_id",
         as: "host"
-    }},
+      }
+    },
     { $unwind: { path: "$host", preserveNullAndEmptyArrays: true } },
 
     // Lookup user
-    { $lookup: {
+    {
+      $lookup: {
         from: "users",
         localField: "userId",
         foreignField: "_id",
         as: "user"
-    }},
+      }
+    },
     { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
   ];
 
@@ -405,6 +472,6 @@ export const BookingServices = {
   getUserBookingsFromDB,
   approveBookingByHostFromDB,
   confirmBookingAfterPaymentFromDB,
-  bookingStatusCronJob,
+  // bookingStatusCronJob,
   getAllBookingsFromDB,
 }
