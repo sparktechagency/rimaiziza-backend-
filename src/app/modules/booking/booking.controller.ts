@@ -52,17 +52,17 @@ const approveBookingByHost = catchAsync(async (req, res) => {
     });
 })
 
-const confirmBookingAfterPayment = catchAsync(async (req, res) => {
-    const { id: userId } = req.user as { id: string };
-    const { bookingId } = req.params;
-    const result = await BookingServices.confirmBookingAfterPaymentFromDB(bookingId, userId);
-    sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message: "Booking confirmed successfully",
-        data: result,
-    });
-})
+// const confirmBookingAfterPayment = catchAsync(async (req, res) => {
+//     const { id: userId } = req.user as { id: string };
+//     const { bookingId } = req.params;
+//     const result = await BookingServices.confirmBookingAfterPaymentFromDB(bookingId, userId);
+//     sendResponse(res, {
+//         statusCode: 200,
+//         success: true,
+//         message: "Booking confirmed successfully",
+//         data: result,
+//     });
+// })
 
 const getAllBookings = catchAsync(async (req, res) => {
     const result = await BookingServices.getAllBookingsFromDB(req.query);
@@ -82,6 +82,6 @@ export const BookingControllers = {
     getHostBookings,
     getUserBookings,
     approveBookingByHost,
-    confirmBookingAfterPayment,
+    // confirmBookingAfterPayment,
     getAllBookings,
 }

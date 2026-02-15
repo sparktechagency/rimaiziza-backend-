@@ -46,11 +46,11 @@ router.route("/user")
         BookingControllers.getUserBookings,
     );
 
-router.route("/user/:bookingId")
-    .patch(
-        auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-        BookingControllers.confirmBookingAfterPayment,
-    );
+// router.route("/user/:bookingId")
+//     .patch(
+//         auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+//         BookingControllers.confirmBookingAfterPayment,
+//     );
 
 
 
