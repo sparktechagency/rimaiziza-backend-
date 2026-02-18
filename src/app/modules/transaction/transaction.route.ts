@@ -9,6 +9,6 @@ router.post("/create-payment-session/:bookingId",auth(USER_ROLES.USER) ,Transact
 
 router.post("/create-extend-payment-session/:bookingId",auth(USER_ROLES.USER) ,TransactionControllers.createExtendBookingPaymentController);
 
-
+router.get("/",auth(USER_ROLES.USER,USER_ROLES.HOST) ,TransactionControllers.getTransactionsController);
 
 export const TransactionRoutes = router;

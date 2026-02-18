@@ -19,6 +19,7 @@ export enum TRANSACTION_CURRENCY {
 export interface ITransaction {
     bookingId: Types.ObjectId;
     userId: Types.ObjectId;
+    hostId: Types.ObjectId;
     stripeSessionId?: string;
     stripePaymentIntentId?: string;
     amount: number;

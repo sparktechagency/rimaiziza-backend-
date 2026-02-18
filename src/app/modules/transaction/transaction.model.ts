@@ -13,6 +13,11 @@ const transactionSchema = new Schema({
         ref: "User",
         required: true
     },
+    hostId: {
+        type: Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     stripeSessionId: String,
     stripePaymentIntentId: String,
     amount: {

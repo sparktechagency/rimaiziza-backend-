@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import config from "../../../config";
 import stripe from "../../../config/stripe";
 import ApiError from "../../../errors/ApiErrors";
@@ -9,6 +10,8 @@ import { validateAvailabilityStrict } from "../car/car.utils";
 import { getDynamicCharges } from "../charges/charges.service";
 import { TRANSACTION_STATUS, TRANSACTION_TYPE } from "./transaction.interface";
 import { Transaction } from "./transaction.model";
+import { User } from "../user/user.model";
+import { USER_ROLES } from "../../../enums/user";
 
 
 // const createBookingPaymentSession = async (bookingId: string, userId: string) => {
@@ -109,7 +112,7 @@ const createBookingPaymentSession = async (
     if (!car) throw new Error("Car details not found");
 
     const totalAmount =
-        booking.totalAmount ;
+        booking.totalAmount;
 
     //  Dynamic charges calculation
     const charges = await getDynamicCharges({
@@ -120,6 +123,7 @@ const createBookingPaymentSession = async (
     const transaction = await Transaction.create({
         bookingId: booking._id,
         userId,
+        hostId: booking.hostId,
         amount: totalAmount,
         type: TRANSACTION_TYPE.BOOKING,
         status: TRANSACTION_STATUS.INITIATED,
@@ -199,6 +203,7 @@ const createExtendBookingPaymentSession = async (
     const transaction = await Transaction.create({
         bookingId: booking._id,
         userId,
+        hostId: booking.hostId,
         amount: extendedAmount,
         type: TRANSACTION_TYPE.EXTEND,
         status: TRANSACTION_STATUS.INITIATED,
@@ -236,9 +241,52 @@ const createExtendBookingPaymentSession = async (
 };
 
 
+const getTransactionsFromDB = async (userId: string, status?: string) => {
+    if (!Types.ObjectId.isValid(userId)) {
+        throw new Error("Invalid user ID");
+    }
 
+    // Step 1: Fetch user to get role
+    const user = await User.findById(userId).select("role");
+    if (!user) throw new Error("User not found");
+
+    // Step 2: Get bookings depending on role
+    const bookingFilter: any = user.role === USER_ROLES.USER
+        ? { userId: new Types.ObjectId(userId) }
+        : { hostId: new Types.ObjectId(userId) };
+
+    const bookings = await Booking.find(bookingFilter).select("_id");
+
+    if (!bookings.length) return [];
+
+    const bookingIds = bookings.map(b => b._id);
+
+    // Step 3: Build transaction filter
+    const transactionFilter: any = { bookingId: { $in: bookingIds } };
+
+    if (status) {
+        // If status is provided in query, use it
+        transactionFilter.status = status;
+    } else {
+        // If no status provided, default to SUCCESS and REFUNDED
+        transactionFilter.status = { $in: [TRANSACTION_STATUS.SUCCESS, TRANSACTION_STATUS.REFUNDED] };
+    }
+
+    // Step 4: Fetch transactions
+    const transactions = await Transaction.find(transactionFilter)
+        .populate({
+            path: "userId",
+        })
+        .populate({
+            path: "hostId",
+        })
+        .lean();
+
+    return transactions;
+};
 
 export const TransactionServices = {
     createBookingPaymentSession,
     createExtendBookingPaymentSession,
+    getTransactionsFromDB,
 }
