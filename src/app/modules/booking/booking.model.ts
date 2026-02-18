@@ -94,6 +94,15 @@ const bookingSchema = new Schema<IBooking>(
         checkedOutAt: {
             type: Date
         },
+        extendHistory: {
+            type: [{
+                previousToDate: Date,
+                newToDate: Date,
+                transactionId: Types.ObjectId,
+                extendedAt: Date,
+            }],
+            default: []
+        },
     },
     {
         timestamps: true,

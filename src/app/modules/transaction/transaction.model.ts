@@ -46,7 +46,10 @@ const transactionSchema = new Schema({
             type: Number,
             default: 0
         }
-    }
+    },
+    extendToDate: {
+        type: Date,
+    },
 }, {
     timestamps: true,
     versionKey: false,

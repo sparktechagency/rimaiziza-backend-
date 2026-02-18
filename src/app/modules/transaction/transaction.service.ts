@@ -202,6 +202,7 @@ const createExtendBookingPaymentSession = async (
         amount: extendedAmount,
         type: TRANSACTION_TYPE.EXTEND,
         status: TRANSACTION_STATUS.INITIATED,
+        extendToDate: newToDate,
     });
 
     // Create Stripe session
@@ -220,6 +221,7 @@ const createExtendBookingPaymentSession = async (
             transactionId: transaction._id.toString(),
             bookingId: booking._id.toString(),
             originalBookingId: booking._id.toString(),
+            extendToDate: newToDate.toISOString(),
         },
         success_url: `http://10.10.7.41:5005/extend-payment-success`,
         cancel_url: `http://10.10.7.41:5005/extend-payment-cancel`,

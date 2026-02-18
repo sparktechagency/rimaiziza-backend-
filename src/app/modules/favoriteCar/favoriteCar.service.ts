@@ -61,27 +61,35 @@ const getFavorite = async (userId: string) => {
 
 
  // ---------- STEP 3: Attach trips + rating ----------
-const finalFavorites = await Promise.all(
+ const finalFavorites = await Promise.all(
   favorites.map(async (fav: any) => {
+
+    console.log(fav, "fav");
     const carId = fav.referenceId?._id?.toString();
     if (!carId) return fav;
 
-    // review system dual, reviewType = HOST
-    const reviewSummary =
-      await ReviewServices.getReviewSummary(
-        fav.referenceId.userId.toString(), // hostId
-        REVIEW_TARGET_TYPE.HOST, // reviewType
+    const hostId = fav.referenceId?.userId
+      ? fav.referenceId.userId.toString()
+      : null;
+
+    let reviewSummary: any = null;
+
+    if (hostId) {
+      reviewSummary = await ReviewServices.getReviewSummary(
+        hostId,
+        REVIEW_TARGET_TYPE.HOST,
       );
+    }
 
     return {
       ...fav,
       referenceId: {
         ...fav.referenceId,
         trips: tripCountMap[carId] || 0,
-        averageRating: reviewSummary.averageRating,
-        totalReviews: reviewSummary.totalReviews,
-        starCounts: reviewSummary.starCounts,
-        reviews: reviewSummary.reviews,
+        averageRating: reviewSummary ? reviewSummary.averageRating : undefined,
+        totalReviews: reviewSummary ? reviewSummary.totalReviews : undefined,
+        starCounts: reviewSummary ? reviewSummary.starCounts : undefined,
+        reviews: reviewSummary ? reviewSummary.reviews : undefined,
       },
     };
   })

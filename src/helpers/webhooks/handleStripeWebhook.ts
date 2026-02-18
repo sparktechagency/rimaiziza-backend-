@@ -1,6 +1,6 @@
 import { BOOKING_STATUS } from "../../app/modules/booking/booking.interface";
 import { Booking } from "../../app/modules/booking/booking.model";
-import { TRANSACTION_STATUS } from "../../app/modules/transaction/transaction.interface";
+import { TRANSACTION_STATUS, TRANSACTION_TYPE } from "../../app/modules/transaction/transaction.interface";
 import { Transaction } from "../../app/modules/transaction/transaction.model";
 import { User } from "../../app/modules/user/user.model";
 import stripe from "../../config/stripe";
@@ -26,6 +26,69 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
 
   if (booking) console.log(`✅ Booking ${booking._id} confirmed`);
   else console.log(`⚠ Booking ${transaction.bookingId} already confirmed or invalid state`);
+};
+
+// Handle extend booking success
+export const handleExtendBookingSuccess = async (session: any) => {
+  const transactionId = session.metadata?.transactionId;
+  if (!transactionId) return;
+
+  const transaction = await Transaction.findById(transactionId);
+  if (!transaction) return;
+
+  // 🔒 Prevent double execution
+  if (transaction.status === TRANSACTION_STATUS.SUCCESS) {
+    console.log("Extend already processed");
+    return;
+  }
+
+  // Only EXTEND type allowed
+  if (transaction.type !== TRANSACTION_TYPE.EXTEND) return;
+
+  const booking = await Booking.findById(transaction.bookingId);
+  if (!booking) return;
+
+  // Booking must be active
+  if (![BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING].includes(booking.bookingStatus)) {
+    console.log("Booking not in extendable state");
+    return;
+  }
+
+  // Get newToDate (recommended from DB, not metadata)
+  const newToDate = transaction.extendToDate; // 👈 safer
+
+  if (!newToDate) {
+    console.error("No extendToDate found in transaction");
+    return;
+  }
+
+  if (newToDate <= booking.toDate) {
+    console.log("Invalid extend date");
+    return;
+  }
+
+  // ✅ Update transaction
+  transaction.status = TRANSACTION_STATUS.SUCCESS;
+  transaction.stripePaymentIntentId = session.payment_intent;
+  await transaction.save();
+
+  // ✅ Update booking time
+  booking.toDate = newToDate;
+
+  // Optional: store extend history
+  booking.extendHistory = [
+    ...(booking.extendHistory || []),
+    {
+      previousToDate: booking.toDate,
+      newToDate,
+      transactionId: transaction._id,
+      extendedAt: new Date(),
+    },
+  ];
+
+  await booking.save();
+
+  console.log(`🚀 Booking ${booking._id} extended to ${newToDate}`);
 };
 
 /** Handle host account.updated → mark onboarded */
@@ -68,7 +131,15 @@ export const handleStripeWebhook = async (req: any, res: any) => {
   try {
     switch (event.type) {
       case "checkout.session.completed":
-        await handleCheckoutSessionCompleted(event.data.object);
+        const session = event.data.object;
+        const transaction = await Transaction.findById(session.metadata.transactionId);
+        if (!transaction) break;
+
+        if (transaction.type === TRANSACTION_TYPE.EXTEND) {
+          await handleExtendBookingSuccess(session);
+        } else {
+          await handleCheckoutSessionCompleted(session);
+        }
         break;
 
       case "account.updated":
@@ -94,8 +165,8 @@ export const markBookingOngoing = async (bookingId: string) => {
 
   const now = new Date();
   if ((booking.bookingStatus === BOOKING_STATUS.CONFIRMED || booking.isSelfBooking) &&
-      booking.fromDate <= now && booking.toDate > now &&
-      !booking.isCanceledByUser && !booking.isCanceledByHost
+    booking.fromDate <= now && booking.toDate > now &&
+    !booking.isCanceledByUser && !booking.isCanceledByHost
   ) {
     booking.bookingStatus = BOOKING_STATUS.ONGOING;
     booking.checkedInAt = now;

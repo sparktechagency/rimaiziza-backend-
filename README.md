@@ -7,3 +7,4 @@
 =====================================================================================================================
 1. booking create abong refund complete kora hoise
 2. deposite amount 3 days pore refund daouar part complete kora hoise
+3. extend booking ar khetre daily price k 24 diye vagh kore hourly price ber kore arpor she joto hour book korse toto hour diye * kore price calculate kora hoise.

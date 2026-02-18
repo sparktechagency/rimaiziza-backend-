@@ -35,4 +35,10 @@ export interface IBooking {
     bookingStatus: BOOKING_STATUS;
     checkedInAt?: Date;
     checkedOutAt?: Date;
+    extendHistory?: {
+      previousToDate: Date;
+      newToDate: Date;
+      transactionId: Types.ObjectId;
+      extendedAt: Date;
+    }[];
 }

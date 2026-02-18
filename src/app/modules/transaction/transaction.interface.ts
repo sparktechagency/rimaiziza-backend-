@@ -30,4 +30,5 @@ export interface ITransaction {
         hostCommission: number;
         adminCommission: number;
     };
+    extendToDate?: Date;
 }
