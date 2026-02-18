@@ -1,7 +1,9 @@
 import config from "../../../config";
 import stripe from "../../../config/stripe";
+import ApiError from "../../../errors/ApiErrors";
 import { BOOKING_STATUS } from "../booking/booking.interface";
 import { Booking } from "../booking/booking.model";
+import { calculateExtendBookingAmount, calculateFirstTimeBookingAmount } from "../booking/booking.utils";
 import { ICar } from "../car/car.interface";
 import { validateAvailabilityStrict } from "../car/car.utils";
 import { getDynamicCharges } from "../charges/charges.service";
@@ -97,7 +99,7 @@ const createBookingPaymentSession = async (
 
     // Availability check (strict)
     await validateAvailabilityStrict(
-        booking.carId.toString(),
+        (booking.carId as any)._id.toString(),
         booking.fromDate,
         booking.toDate
     );
@@ -158,8 +160,83 @@ const createBookingPaymentSession = async (
     return session.url;
 };
 
+const createExtendBookingPaymentSession = async (
+    bookingId: string,
+    userId: string,
+    newToDate: Date
+) => {
+
+    console.log(newToDate, "NEW TO DATE")
+    if (!newToDate) {
+        throw new ApiError(400, "New end date is required");
+    }
+    const booking = await Booking.findById(bookingId).populate("carId");
+    if (!booking) throw new ApiError(404, "Booking not found");
+    if (!booking.userId.equals(userId)) throw new ApiError(403, "Unauthorized");
+
+    if (![BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING].includes(booking.bookingStatus)) {
+        throw new ApiError(400, "Only active bookings can be extended");
+    }
+
+    if (newToDate <= booking.toDate) {
+        throw new ApiError(400, "New end date must be after current booking end date");
+    }
+
+    // Availability check
+    await validateAvailabilityStrict(
+        (booking.carId as any)._id.toString(),
+        booking.toDate,
+        newToDate
+    );
+
+    // Calculate extended amount
+    const car = booking.carId as any;
+    const extendedAmount = calculateExtendBookingAmount(booking.toDate, newToDate, car);
+
+    console.log(extendedAmount, "EXTENDED AMOUNT")
+
+    // Create transaction
+    const transaction = await Transaction.create({
+        bookingId: booking._id,
+        userId,
+        amount: extendedAmount,
+        type: TRANSACTION_TYPE.EXTEND,
+        status: TRANSACTION_STATUS.INITIATED,
+    });
+
+    // Create Stripe session
+    const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [{
+            price_data: {
+                currency: process.env.CURRENCY!,
+                product_data: { name: `Extend Booking ${booking.bookingId}` },
+                unit_amount: Math.round(extendedAmount * 100),
+            },
+            quantity: 1,
+        }],
+        metadata: {
+            transactionId: transaction._id.toString(),
+            bookingId: booking._id.toString(),
+            originalBookingId: booking._id.toString(),
+        },
+        success_url: `http://10.10.7.41:5005/extend-payment-success`,
+        cancel_url: `http://10.10.7.41:5005/extend-payment-cancel`,
+    });
+
+    transaction.stripeSessionId = session.id;
+    await transaction.save();
+
+    console.log(session, "SESSIOn")
+
+    return session.url;
+};
+
+
 
 
 export const TransactionServices = {
     createBookingPaymentSession,
+    createExtendBookingPaymentSession,
 }

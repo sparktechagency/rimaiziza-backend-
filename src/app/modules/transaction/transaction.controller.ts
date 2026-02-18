@@ -15,6 +15,28 @@ const createBookingPaymentSession = catchAsync(async (req, res) => {
     })
 })
 
+const createExtendBookingPaymentController = catchAsync(
+    async (req, res) => {
+        const { id: userId } = req.user as any;
+        const { bookingId } = req.params;
+        const { newToDate } = req.body;
+
+        const sessionUrl = await TransactionServices.createExtendBookingPaymentSession(
+            bookingId,
+            userId,
+            new Date(newToDate)
+        );
+
+        sendResponse(res, {
+            success: true,
+            statusCode: 200,
+            message: "Extend booking payment session created successfully",
+            data: sessionUrl,
+        });
+    }
+);
+
 export const TransactionControllers = {
     createBookingPaymentSession,
+    createExtendBookingPaymentController,
 }

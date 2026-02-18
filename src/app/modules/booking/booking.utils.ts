@@ -37,6 +37,47 @@ export const calculateFirstTimeBookingAmount = (from: Date, to: Date, car: any) 
     return amount;
 };
 
+export const calculateExtendBookingAmount = (
+  from: Date,
+  to: Date,
+  car: any
+): number => {
+  if (!from || !to) {
+    throw new Error("Invalid date provided");
+  }
+
+  const fromTime = new Date(from);
+  const toTime = new Date(to);
+
+  if (isNaN(fromTime.getTime()) || isNaN(toTime.getTime())) {
+    throw new Error("Invalid date format");
+  }
+
+  const diffMs = toTime.getTime() - fromTime.getTime();
+
+  if (diffMs <= 0) {
+    throw new Error("Extend time must be after current booking end");
+  }
+
+  const totalHours = diffMs / (1000 * 60 * 60);
+
+  if (!Number.isInteger(totalHours)) {
+    throw new Error("Extend must be full hour slots");
+  }
+
+  if (!car?.dailyPrice || isNaN(car.dailyPrice)) {
+    throw new Error("Invalid car daily price");
+  }
+
+  const hourlyRate = car.dailyPrice / 24;
+
+  const amount = hourlyRate * totalHours;
+
+  // round to 2 decimal places
+  return Number(amount.toFixed(2));
+};
+
+
 export const validateAvailabilityStrictForApproval = async (
     carId: string,
     from: Date,

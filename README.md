@@ -2,6 +2,8 @@
 2. booking time extend korar functionality baki ase
 3. booking cancel ar part baki ase
 4. trips ar part baki ase
+5. validation korte hobe jeno 24 hours ar niche booking kora na jai min 24 hours book korte hobe
+6. booking 
 =====================================================================================================================
 1. booking create abong refund complete kora hoise
 2. deposite amount 3 days pore refund daouar part complete kora hoise
