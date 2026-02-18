@@ -168,6 +168,7 @@ const createExtendBookingPaymentSession = (bookingId, userId, newToDate) => __aw
         amount: extendedAmount,
         type: transaction_interface_1.TRANSACTION_TYPE.EXTEND,
         status: transaction_interface_1.TRANSACTION_STATUS.INITIATED,
+        extendToDate: newToDate,
     });
     // Create Stripe session
     const session = yield stripe_1.default.checkout.sessions.create({
@@ -185,6 +186,7 @@ const createExtendBookingPaymentSession = (bookingId, userId, newToDate) => __aw
             transactionId: transaction._id.toString(),
             bookingId: booking._id.toString(),
             originalBookingId: booking._id.toString(),
+            extendToDate: newToDate.toISOString(),
         },
         success_url: `http://10.10.7.41:5005/extend-payment-success`,
         cancel_url: `http://10.10.7.41:5005/extend-payment-cancel`,

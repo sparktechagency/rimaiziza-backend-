@@ -52,6 +52,24 @@ const approveBookingByHost = catchAsync(async (req, res) => {
     });
 })
 
+const cancelBooking = catchAsync(async (req, res) => {
+    const { id: actorId, role } = req.user as { id: string; role: any };
+    const { bookingId } = req.params;
+
+    const result = await BookingServices.cancelBookingFromDB(
+        bookingId,
+        actorId,
+        role
+    );
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Booking cancelled successfully",
+        data: result,
+    });
+});
+
 // const confirmBookingAfterPayment = catchAsync(async (req, res) => {
 //     const { id: userId } = req.user as { id: string };
 //     const { bookingId } = req.params;
@@ -82,6 +100,7 @@ export const BookingControllers = {
     getHostBookings,
     getUserBookings,
     approveBookingByHost,
+    cancelBooking,
     // confirmBookingAfterPayment,
     getAllBookings,
 }

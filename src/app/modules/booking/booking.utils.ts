@@ -9,6 +9,7 @@ export const calculateFirstTimeBookingAmount = (from: Date, to: Date, car: any) 
     console.log(from, to, car, "---CAR---");
 
     const totalMs = to.getTime() - from.getTime();
+    
     const totalHours = Math.ceil(totalMs / (1000 * 60 * 60)); // round up partial hour
     const dailyHours = 24;
 

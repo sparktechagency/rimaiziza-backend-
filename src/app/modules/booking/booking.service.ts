@@ -1,11 +1,16 @@
 import { Types } from "mongoose";
 import ApiError from "../../../errors/ApiErrors";
+import stripe from "../../../config/stripe";
 import { generateBookingId } from "../../../helpers/generateYearBasedId";
+import { USER_ROLES } from "../../../enums/user";
 import { Car } from "../car/car.model";
 import { validateAvailabilityStrict } from "../car/car.utils";
+import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
+import { Transaction } from "../transaction/transaction.model";
 import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
 import { calculateFirstTimeBookingAmount, validateAvailabilityStrictForApproval } from "./booking.utils";
+import { getDynamicCharges } from "../charges/charges.service";
 
 const createBookingToDB = async (payload: any, userId: string) => {
   await validateAvailabilityStrict(
@@ -195,6 +200,120 @@ const approveBookingByHostFromDB = async (
   return booking;
 };
 
+const cancelBookingFromDB = async (
+  bookingId: string,
+  actorId: string,
+  actorRole: USER_ROLES
+) => {
+  if (!Types.ObjectId.isValid(bookingId)) {
+    throw new ApiError(400, "Invalid booking id");
+  }
+
+  const booking = await Booking.findById(bookingId)
+    .populate("carId")
+    .populate("transactionId");
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found");
+  }
+
+  if (booking.bookingStatus === BOOKING_STATUS.CANCELLED) {
+    throw new ApiError(400, "Booking already cancelled");
+  }
+
+  if (booking.bookingStatus === BOOKING_STATUS.COMPLETED) {
+    throw new ApiError(400, "Completed booking cannot be cancelled");
+  }
+
+  const isUserActor = actorRole === USER_ROLES.USER;
+  const isHostActor = actorRole === USER_ROLES.HOST;
+  const isAdminActor =
+    actorRole === USER_ROLES.ADMIN || actorRole === USER_ROLES.SUPER_ADMIN;
+
+  // Role-based permission check
+  if (isUserActor) {
+    if (!booking.userId.equals(actorId)) {
+      throw new ApiError(403, "You are not allowed to cancel this booking");
+    }
+    if (booking.isSelfBooking) {
+      throw new ApiError(403, "Self bookings cannot be cancelled by customer");
+    }
+  } else if (isHostActor) {
+    if (!booking.hostId.equals(actorId) || !booking.isSelfBooking) {
+      throw new ApiError(
+        403,
+        "Hosts can cancel only their own self bookings"
+      );
+    }
+  } else if (!isAdminActor) {
+    throw new ApiError(403, "You are not allowed to cancel this booking");
+  }
+
+  const now = new Date();
+  const transaction = booking.transactionId
+    ? await Transaction.findById(booking.transactionId)
+    : null;
+
+  if (transaction && transaction.status === TRANSACTION_STATUS.SUCCESS && transaction.stripePaymentIntentId) {
+    const car = booking.carId as any;
+
+    if (!car) throw new ApiError(400, "Car details not found");
+
+    const fromDate = new Date(booking.fromDate);
+    const toDate = new Date(booking.toDate);
+    const totalDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+
+    const paidAmount = transaction.amount;
+    const dailyPrice = car.dailyPrice;
+
+    // Get dynamic charges
+    const { platformFee, hostCommission, adminCommission } = await getDynamicCharges({ totalAmount: paidAmount });
+
+    const diffMs = fromDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    let chargeAmount = 0;
+
+    // Cancellation after pickup
+    if (now >= fromDate) {
+      // Multi-day prorated charge
+      const daysUsed = Math.min(Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)), totalDays);
+      chargeAmount = daysUsed * dailyPrice + platformFee + hostCommission + adminCommission;
+    } 
+    // Cancellation < 72 hours before pickup
+    else if (diffHours < 72) {
+      chargeAmount = dailyPrice;
+    }
+
+    if (chargeAmount < 0) chargeAmount = 0;
+    if (chargeAmount > paidAmount) chargeAmount = paidAmount;
+
+    const refundAmount = paidAmount - chargeAmount;
+
+    if (refundAmount > 0) {
+      await stripe.refunds.create({
+        payment_intent: transaction.stripePaymentIntentId,
+        amount: Math.round(refundAmount * 100),
+      });
+      transaction.status = TRANSACTION_STATUS.REFUNDED;
+      await transaction.save();
+    }
+  }
+
+  if (isUserActor) booking.isCanceledByUser = true;
+  if (isHostActor) booking.isCanceledByHost = true;
+
+  booking.bookingStatus = BOOKING_STATUS.CANCELLED;
+  await booking.save();
+
+  // Update vehicle availability
+  if (booking.carId) {
+    await Car.findByIdAndUpdate(booking.carId._id, { isAvailable: true });
+  }
+
+  return booking;
+};
+
 // const confirmBookingAfterPaymentFromDB = async (
 //   bookingId: string,
 //   userId: string,
@@ -334,6 +453,7 @@ export const BookingServices = {
   getHostBookingsFromDB,
   getUserBookingsFromDB,
   approveBookingByHostFromDB,
+  cancelBookingFromDB,
   // confirmBookingAfterPaymentFromDB,
   getAllBookingsFromDB,
 }

@@ -56,6 +56,14 @@ const bookingSchema = new mongoose_1.Schema({
         type: Date,
         required: false
     },
+    deliveryFee: {
+        type: Number,
+        required: false
+    },
+    collectionFee: {
+        type: Number,
+        required: false
+    },
     isCanceledByUser: {
         type: Boolean,
         default: false
@@ -94,6 +102,15 @@ const bookingSchema = new mongoose_1.Schema({
     },
     checkedOutAt: {
         type: Date
+    },
+    extendHistory: {
+        type: [{
+                previousToDate: Date,
+                newToDate: Date,
+                transactionId: mongoose_1.Types.ObjectId,
+                extendedAt: Date,
+            }],
+        default: []
     },
 }, {
     timestamps: true,

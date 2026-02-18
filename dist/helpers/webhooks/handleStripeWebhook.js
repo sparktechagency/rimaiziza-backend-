@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bookingStatusCronJob = exports.refundDepositIfEligible = exports.markBookingCompleted = exports.markBookingOngoing = exports.handleStripeWebhook = exports.handleCheckoutSessionCompleted = void 0;
+exports.bookingStatusCronJob = exports.refundDepositIfEligible = exports.markBookingCompleted = exports.markBookingOngoing = exports.handleStripeWebhook = exports.handleExtendBookingSuccess = exports.handleCheckoutSessionCompleted = void 0;
 const booking_interface_1 = require("../../app/modules/booking/booking.interface");
 const booking_model_1 = require("../../app/modules/booking/booking.model");
 const transaction_interface_1 = require("../../app/modules/transaction/transaction.interface");
@@ -37,6 +37,61 @@ const handleCheckoutSessionCompleted = (session) => __awaiter(void 0, void 0, vo
         console.log(`⚠ Booking ${transaction.bookingId} already confirmed or invalid state`);
 });
 exports.handleCheckoutSessionCompleted = handleCheckoutSessionCompleted;
+// Handle extend booking success
+const handleExtendBookingSuccess = (session) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const transactionId = (_a = session.metadata) === null || _a === void 0 ? void 0 : _a.transactionId;
+    if (!transactionId)
+        return;
+    const transaction = yield transaction_model_1.Transaction.findById(transactionId);
+    if (!transaction)
+        return;
+    // 🔒 Prevent double execution
+    if (transaction.status === transaction_interface_1.TRANSACTION_STATUS.SUCCESS) {
+        console.log("Extend already processed");
+        return;
+    }
+    // Only EXTEND type allowed
+    if (transaction.type !== transaction_interface_1.TRANSACTION_TYPE.EXTEND)
+        return;
+    const booking = yield booking_model_1.Booking.findById(transaction.bookingId);
+    if (!booking)
+        return;
+    // Booking must be active
+    if (![booking_interface_1.BOOKING_STATUS.CONFIRMED, booking_interface_1.BOOKING_STATUS.ONGOING].includes(booking.bookingStatus)) {
+        console.log("Booking not in extendable state");
+        return;
+    }
+    // Get newToDate (recommended from DB, not metadata)
+    const newToDate = transaction.extendToDate; // 👈 safer
+    if (!newToDate) {
+        console.error("No extendToDate found in transaction");
+        return;
+    }
+    if (newToDate <= booking.toDate) {
+        console.log("Invalid extend date");
+        return;
+    }
+    // ✅ Update transaction
+    transaction.status = transaction_interface_1.TRANSACTION_STATUS.SUCCESS;
+    transaction.stripePaymentIntentId = session.payment_intent;
+    yield transaction.save();
+    // ✅ Update booking time
+    booking.toDate = newToDate;
+    // Optional: store extend history
+    booking.extendHistory = [
+        ...(booking.extendHistory || []),
+        {
+            previousToDate: booking.toDate,
+            newToDate,
+            transactionId: transaction._id,
+            extendedAt: new Date(),
+        },
+    ];
+    yield booking.save();
+    console.log(`🚀 Booking ${booking._id} extended to ${newToDate}`);
+});
+exports.handleExtendBookingSuccess = handleExtendBookingSuccess;
 /** Handle host account.updated → mark onboarded */
 const handleAccountUpdated = (account) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c;
@@ -69,7 +124,16 @@ const handleStripeWebhook = (req, res) => __awaiter(void 0, void 0, void 0, func
     try {
         switch (event.type) {
             case "checkout.session.completed":
-                yield (0, exports.handleCheckoutSessionCompleted)(event.data.object);
+                const session = event.data.object;
+                const transaction = yield transaction_model_1.Transaction.findById(session.metadata.transactionId);
+                if (!transaction)
+                    break;
+                if (transaction.type === transaction_interface_1.TRANSACTION_TYPE.EXTEND) {
+                    yield (0, exports.handleExtendBookingSuccess)(session);
+                }
+                else {
+                    yield (0, exports.handleCheckoutSessionCompleted)(session);
+                }
                 break;
             case "account.updated":
                 yield handleAccountUpdated(event.data.object);

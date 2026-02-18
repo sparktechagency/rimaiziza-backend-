@@ -108,8 +108,8 @@ const createBookingPaymentSession = async (
     const car = booking.carId as any;
     if (!car) throw new Error("Car details not found");
 
-    const totalAmountWithDeposit =
-        booking.totalAmount + (car.depositAmount || 0);
+    const totalAmount =
+        booking.totalAmount ;
 
     //  Dynamic charges calculation
     const charges = await getDynamicCharges({
@@ -120,7 +120,7 @@ const createBookingPaymentSession = async (
     const transaction = await Transaction.create({
         bookingId: booking._id,
         userId,
-        amount: totalAmountWithDeposit,
+        amount: totalAmount,
         type: TRANSACTION_TYPE.BOOKING,
         status: TRANSACTION_STATUS.INITIATED,
         charges: {
@@ -141,7 +141,7 @@ const createBookingPaymentSession = async (
                     product_data: {
                         name: `Booking ${booking._id}`,
                     },
-                    unit_amount: Math.round(totalAmountWithDeposit * 100),
+                    unit_amount: Math.round(totalAmount * 100),
                 },
                 quantity: 1,
             },

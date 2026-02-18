@@ -33,6 +33,17 @@ router.route("/host/:bookingId")
         BookingControllers.approveBookingByHost,
     );
 
+router.route("/cancel/:bookingId")
+    .post(
+        auth(
+            USER_ROLES.USER,
+            USER_ROLES.HOST,
+            USER_ROLES.ADMIN,
+            USER_ROLES.SUPER_ADMIN
+        ),
+        BookingControllers.cancelBooking,
+    );
+
 router.route("/all")
     .get(
         auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),

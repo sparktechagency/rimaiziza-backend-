@@ -48,7 +48,10 @@ const transactionSchema = new mongoose_2.Schema({
             type: Number,
             default: 0
         }
-    }
+    },
+    extendToDate: {
+        type: Date,
+    },
 }, {
     timestamps: true,
     versionKey: false,

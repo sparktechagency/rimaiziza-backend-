@@ -17,6 +17,8 @@ router.route("/host")
     .get((0, auth_1.default)(user_1.USER_ROLES.HOST, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), booking_controller_1.BookingControllers.getHostBookings);
 router.route("/host/:bookingId")
     .patch((0, auth_1.default)(user_1.USER_ROLES.HOST, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), booking_controller_1.BookingControllers.approveBookingByHost);
+router.route("/:bookingId/cancel")
+    .post((0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.HOST, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), booking_controller_1.BookingControllers.cancelBooking);
 router.route("/all")
     .get((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), booking_controller_1.BookingControllers.getAllBookings);
 router.route("/user")

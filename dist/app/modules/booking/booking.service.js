@@ -15,9 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookingServices = void 0;
 const mongoose_1 = require("mongoose");
 const ApiErrors_1 = __importDefault(require("../../../errors/ApiErrors"));
+const stripe_1 = __importDefault(require("../../../config/stripe"));
 const generateYearBasedId_1 = require("../../../helpers/generateYearBasedId");
+const user_1 = require("../../../enums/user");
 const car_model_1 = require("../car/car.model");
 const car_utils_1 = require("../car/car.utils");
+const transaction_interface_1 = require("../transaction/transaction.interface");
+const transaction_model_1 = require("../transaction/transaction.model");
 const booking_interface_1 = require("./booking.interface");
 const booking_model_1 = require("./booking.model");
 const booking_utils_1 = require("./booking.utils");
@@ -135,6 +139,93 @@ const approveBookingByHostFromDB = (bookingId, hostId) => __awaiter(void 0, void
      */
     yield (0, booking_utils_1.validateAvailabilityStrictForApproval)(booking.carId.toString(), booking.fromDate, booking.toDate, booking._id.toString());
     booking.bookingStatus = booking_interface_1.BOOKING_STATUS.PENDING;
+    yield booking.save();
+    return booking;
+});
+const cancelBookingFromDB = (bookingId, actorId, actorRole) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!mongoose_1.Types.ObjectId.isValid(bookingId)) {
+        throw new ApiErrors_1.default(400, "Invalid booking id");
+    }
+    const booking = yield booking_model_1.Booking.findById(bookingId)
+        .populate("carId")
+        .populate("transactionId");
+    if (!booking) {
+        throw new ApiErrors_1.default(404, "Booking not found");
+    }
+    if (booking.bookingStatus === booking_interface_1.BOOKING_STATUS.CANCELLED) {
+        throw new ApiErrors_1.default(400, "Booking already cancelled");
+    }
+    if (booking.bookingStatus === booking_interface_1.BOOKING_STATUS.COMPLETED) {
+        throw new ApiErrors_1.default(400, "Completed booking cannot be cancelled");
+    }
+    const isUserActor = actorRole === user_1.USER_ROLES.USER;
+    const isHostActor = actorRole === user_1.USER_ROLES.HOST;
+    const isAdminActor = actorRole === user_1.USER_ROLES.ADMIN || actorRole === user_1.USER_ROLES.SUPER_ADMIN;
+    if (isUserActor) {
+        if (!booking.userId.equals(actorId)) {
+            throw new ApiErrors_1.default(403, "You are not allowed to cancel this booking");
+        }
+        if (booking.isSelfBooking) {
+            throw new ApiErrors_1.default(403, "Self bookings cannot be cancelled by customer");
+        }
+    }
+    else if (isHostActor) {
+        if (!booking.hostId.equals(actorId) || !booking.isSelfBooking) {
+            throw new ApiErrors_1.default(403, "Hosts can cancel only their own self bookings");
+        }
+    }
+    else if (!isAdminActor) {
+        throw new ApiErrors_1.default(403, "You are not allowed to cancel this booking");
+    }
+    const now = new Date();
+    const transaction = booking.transactionId
+        ? yield transaction_model_1.Transaction.findById(booking.transactionId)
+        : null;
+    if (transaction &&
+        transaction.status === transaction_interface_1.TRANSACTION_STATUS.SUCCESS &&
+        transaction.stripePaymentIntentId) {
+        const car = booking.carId;
+        if (!car) {
+            throw new ApiErrors_1.default(400, "Car details not found");
+        }
+        const fromDate = new Date(booking.fromDate);
+        const cancellationTime = now;
+        const paidAmount = transaction.amount;
+        const dailyPrice = car.dailyPrice;
+        const deliveryFee = booking.deliveryFee || 0;
+        const collectionFee = booking.collectionFee || 0;
+        const diffMs = fromDate.getTime() - cancellationTime.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+        let chargeAmount = 0;
+        if (cancellationTime >= fromDate) {
+            chargeAmount = dailyPrice + deliveryFee + collectionFee;
+        }
+        else if (diffHours < 72) {
+            chargeAmount = dailyPrice;
+        }
+        if (chargeAmount < 0) {
+            chargeAmount = 0;
+        }
+        if (chargeAmount > paidAmount) {
+            chargeAmount = paidAmount;
+        }
+        const refundAmount = paidAmount - chargeAmount;
+        if (refundAmount > 0) {
+            yield stripe_1.default.refunds.create({
+                payment_intent: transaction.stripePaymentIntentId,
+                amount: Math.round(refundAmount * 100),
+            });
+            transaction.status = transaction_interface_1.TRANSACTION_STATUS.REFUNDED;
+            yield transaction.save();
+        }
+    }
+    if (isUserActor) {
+        booking.isCanceledByUser = true;
+    }
+    if (isHostActor) {
+        booking.isCanceledByHost = true;
+    }
+    booking.bookingStatus = booking_interface_1.BOOKING_STATUS.CANCELLED;
     yield booking.save();
     return booking;
 });
@@ -256,6 +347,7 @@ exports.BookingServices = {
     getHostBookingsFromDB,
     getUserBookingsFromDB,
     approveBookingByHostFromDB,
+    cancelBookingFromDB,
     // confirmBookingAfterPaymentFromDB,
     getAllBookingsFromDB,
 };
