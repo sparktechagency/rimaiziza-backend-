@@ -29,10 +29,10 @@ const createCarToDB = async (payload: ICar) => {
         });
     }
 
- 
-        const result = await Car.create(payload);
-        return result;
-   
+
+    const result = await Car.create(payload);
+    return result;
+
 };
 
 const getAllCarsFromDB = async (query: any) => {
@@ -776,7 +776,7 @@ const getNearbyCarsFromDB = async (params: any) => {
 };
 
 const getCarByIdForUserFromDB = async (id: string, userId: string) => {
-    const car = await Car.findById(id)
+    const car = await Car.findById(id).populate("assignedHosts");
 
     if (!car) {
         return null;
@@ -801,12 +801,26 @@ const getCarByIdForUserFromDB = async (id: string, userId: string) => {
         reviews: [],
     };
 
+
+    let totalBookings = 0;
+    let successRate = 0;
+
     if (car.assignedHosts) {
         reviewSummary = await ReviewServices.getReviewSummary(
-            car.assignedHosts.toString(),
+            car.assignedHosts._id.toString(),
             REVIEW_TARGET_TYPE.HOST
         );
+
+        totalBookings = await Booking.countDocuments({ hostId: car.assignedHosts._id });
+        const completedBookings = await Booking.countDocuments({
+            hostId: car.assignedHosts._id,
+            bookingStatus: { $in: [BOOKING_STATUS.COMPLETED] },
+        });
+        successRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+
     }
+
+
 
     return {
         ...car.toObject(),
@@ -818,6 +832,8 @@ const getCarByIdForUserFromDB = async (id: string, userId: string) => {
         totalReviews: reviewSummary.totalReviews,
         starCounts: reviewSummary.starCounts,
         reviews: reviewSummary.reviews,
+        totalBookings,
+        successRate,
     };
 };
 
@@ -839,9 +855,6 @@ const getCarsByHostFromDB = async (hostId: string) => {
                 referenceId: car._id,
             });
             car.isFavorite = !!isBookmarked;
-
-
-
         })
     );
 

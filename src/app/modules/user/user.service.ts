@@ -16,6 +16,10 @@ import { Types } from "mongoose";
 import { Booking } from "../booking/booking.model";
 import { BOOKING_STATUS } from "../booking/booking.interface";
 import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
+import { ReviewServices } from "../review/review.service";
+import { REVIEW_TARGET_TYPE } from "../review/review.interface";
+import { Car } from "../car/car.model";
+import { getCarTripCount } from "../car/car.utils";
 
 // --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
@@ -352,15 +356,65 @@ const createUserToDB = async (payload: any) => {
   return result;
 };
 
+// const getUserProfileFromDB = async (
+//   user: JwtPayload,
+// ): Promise<Partial<IUser>> => {
+//   const { id } = user;
+//   const isExistUser: any = await User.isExistUserById(id);
+//   if (!isExistUser) {
+//     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+//   }
+//   return isExistUser;
+// };
+
 const getUserProfileFromDB = async (
   user: JwtPayload,
-): Promise<Partial<IUser>> => {
+): Promise<any> => {
   const { id } = user;
+
   const isExistUser: any = await User.isExistUserById(id);
   if (!isExistUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
-  return isExistUser;
+
+  const profile: any = { ...isExistUser.toObject() };
+
+  // যদি host হয়, extra stats
+  if (profile.role === USER_ROLES.HOST) {
+    // Total bookings
+    const totalBookings = await Booking.countDocuments({ hostId: id });
+
+    // Confirmed/Completed bookings
+    const completedBookings = await Booking.countDocuments({
+      hostId: id,
+      bookingStatus: { $in: [BOOKING_STATUS.COMPLETED] },
+    });
+
+
+    // Success rate %
+    const successRate =
+      totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+
+    const hostCar = await Car.findOne({ assignedHosts: id }, { _id: 1 });
+
+    if (!hostCar) throw new ApiError(404, "Host does not have any car");
+
+    const trips = await getCarTripCount(hostCar?._id);
+
+    // Review summary
+    const reviewSummary = await ReviewServices.getReviewSummary(id, REVIEW_TARGET_TYPE.HOST);
+
+    profile.totalBookings = totalBookings;
+    // profile.completedBookings = completedBookings;
+    profile.successRate = successRate;
+    profile.averageRating = reviewSummary.averageRating;
+    // profile.totalReviews = reviewSummary.totalReviews;
+    // profile.starCounts = reviewSummary.starCounts;
+    // profile.reviews = reviewSummary.reviews;
+    profile.trips = trips;
+  }
+
+  return profile;
 };
 
 const updateProfileToDB = async (
