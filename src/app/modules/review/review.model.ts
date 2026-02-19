@@ -6,23 +6,23 @@ const reviewSchema = new Schema<IReview>(
     reviewForId: {
       type: Schema.Types.ObjectId,
       required: true,
-      refPath: "reviewType"
+      refPath: "reviewType",
     },
     reviewById: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: "User"
+      ref: "User",
     },
     ratingValue: {
       type: Number,
       required: true,
       min: 1,
-      max: 5
+      max: 5,
     },
     feedback: {
       type: String,
       trim: true,
-      default: ""
+      default: "",
     },
     reviewType: {
       type: String,
@@ -32,8 +32,8 @@ const reviewSchema = new Schema<IReview>(
   },
   {
     timestamps: true,
-    versionKey: false
-  }
+    versionKey: false,
+  },
 );
 
 // Prevent duplicate review: same reviewer cannot review same target more than once

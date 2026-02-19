@@ -3,6 +3,3 @@ const generateOTP = (): number => {
 };
 
 export default generateOTP;
-
-
-

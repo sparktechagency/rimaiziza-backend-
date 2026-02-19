@@ -26,7 +26,8 @@ const createReview = async (payload: IReview, reviewerId: string) => {
     reviewById: reviewerId,
   });
 
-  if (already) throw new ApiError(400, "You have already reviewed this user/host");
+  if (already)
+    throw new ApiError(400, "You have already reviewed this user/host");
 
   const review = await Review.create({
     reviewForId: new Types.ObjectId(reviewForId),
@@ -40,7 +41,10 @@ const createReview = async (payload: IReview, reviewerId: string) => {
 };
 
 // Get review summary for a given target (host or user)
-const getReviewSummary = async (reviewForId: string, reviewType: REVIEW_TARGET_TYPE) => {
+const getReviewSummary = async (
+  reviewForId: string,
+  reviewType: REVIEW_TARGET_TYPE,
+) => {
   const objectId = new Types.ObjectId(reviewForId);
 
   const summary = await Review.aggregate([
@@ -64,7 +68,7 @@ const getReviewSummary = async (reviewForId: string, reviewType: REVIEW_TARGET_T
     .sort({ createdAt: -1 })
     .lean();
 
-    console.log(reviews,"reviews")
+  console.log(reviews, "reviews");
 
   const reviewList = reviews.map((r: any) => ({
     reviewId: r._id,
@@ -84,7 +88,6 @@ const getReviewSummary = async (reviewForId: string, reviewType: REVIEW_TARGET_T
       : null,
   }));
 
-
   return {
     averageRating: Number(averageRating.toFixed(1)),
     totalReviews,
@@ -102,7 +105,7 @@ interface IStarCountItem {
 
 const getBulkReviewSummary = async (
   targetIds: string[],
-  reviewType: REVIEW_TARGET_TYPE
+  reviewType: REVIEW_TARGET_TYPE,
 ) => {
   const objectIds = targetIds.map((id) => new Types.ObjectId(id));
 
@@ -164,9 +167,7 @@ const getBulkReviewSummary = async (
     });
 
     map.set(item._id.toString(), {
-      averageRating: Number(
-        (item.totalScore / item.totalReviews).toFixed(1)
-      ),
+      averageRating: Number((item.totalScore / item.totalReviews).toFixed(1)),
       totalReviews: item.totalReviews,
       starCounts,
     });

@@ -2,112 +2,114 @@ import { model, Schema, Types } from "mongoose";
 import { BOOKING_STATUS, IBooking } from "./booking.interface";
 
 const bookingSchema = new Schema<IBooking>(
-    {
-        bookingId: {
-            type: String,
-            required: true,
-            unique: true
-        },
-        carId: {
-            type: Schema.Types.ObjectId,
-            ref: "Car",
-            required: true
-        },
-        userId: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true
-        },
-        hostId: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true
-        },
-        transactionId: {
-            type: Schema.Types.ObjectId,
-            ref: "Transaction"
-        },
-        nidFrontPic: {
-            type: String,
-            required:false
-        },
-         nidBackPic: {
-            type: String,
-            required:false
-        },
-        drivingLicenseFrontPic: {
-            type: String,
-            required:false
-        },
-        drivingLicenseBackPic: {
-            type: String,
-            required:false
-        },
-        depositAmount: {
-            type: Number,
-            required: false
-        },
-        isDepositRefunded: {
-            type: Boolean,
-            default: false
-        },
-        depositRefundableAt: {
-            type: Date,
-            required: false
-        },
-        isCanceledByUser: {
-            type: Boolean,
-            default: false
-        },
-        isCanceledByHost: {
-            type: Boolean,
-            default: false
-        },
-        isSelfBooking: {
-            type: Boolean,
-            default: false
-        },
-        fromDate: {
-            type: Date,
-            required: true
-        },
-        toDate: {
-            type: Date,
-            required: true
-        },
-        extendedHours: {
-            type: Number,
-            default: 0
-        },
-        totalAmount: {
-            type: Number,
-            required: true
-        },
-        bookingStatus: {
-            type: String,
-            enum: Object.values(BOOKING_STATUS),
-            default: BOOKING_STATUS.REQUESTED,
-        },
-        checkedInAt: {
-            type: Date
-        },
-        checkedOutAt: {
-            type: Date
-        },
-        extendHistory: {
-            type: [{
-                previousToDate: Date,
-                newToDate: Date,
-                transactionId: Types.ObjectId,
-                extendedAt: Date,
-            }],
-            default: []
-        },
+  {
+    bookingId: {
+      type: String,
+      required: true,
+      unique: true,
     },
-    {
-        timestamps: true,
-        versionKey: false
-    }
+    carId: {
+      type: Schema.Types.ObjectId,
+      ref: "Car",
+      required: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    hostId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    transactionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Transaction",
+    },
+    nidFrontPic: {
+      type: String,
+      required: false,
+    },
+    nidBackPic: {
+      type: String,
+      required: false,
+    },
+    drivingLicenseFrontPic: {
+      type: String,
+      required: false,
+    },
+    drivingLicenseBackPic: {
+      type: String,
+      required: false,
+    },
+    depositAmount: {
+      type: Number,
+      required: false,
+    },
+    isDepositRefunded: {
+      type: Boolean,
+      default: false,
+    },
+    depositRefundableAt: {
+      type: Date,
+      required: false,
+    },
+    isCanceledByUser: {
+      type: Boolean,
+      default: false,
+    },
+    isCanceledByHost: {
+      type: Boolean,
+      default: false,
+    },
+    isSelfBooking: {
+      type: Boolean,
+      default: false,
+    },
+    fromDate: {
+      type: Date,
+      required: true,
+    },
+    toDate: {
+      type: Date,
+      required: true,
+    },
+    extendedHours: {
+      type: Number,
+      default: 0,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    bookingStatus: {
+      type: String,
+      enum: Object.values(BOOKING_STATUS),
+      default: BOOKING_STATUS.REQUESTED,
+    },
+    checkedInAt: {
+      type: Date,
+    },
+    checkedOutAt: {
+      type: Date,
+    },
+    extendHistory: {
+      type: [
+        {
+          previousToDate: Date,
+          newToDate: Date,
+          transactionId: Types.ObjectId,
+          extendedAt: Date,
+        },
+      ],
+      default: [],
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
 // Indexes for common queries

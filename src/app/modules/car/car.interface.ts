@@ -28,8 +28,8 @@ export interface IBlockedDate {
 }
 
 export interface ICarFacility {
-  label: string;   // Display name from dashboard (e.g. "Bluetooth")
-  value: string;   // Unique key (e.g. "bluetooth", "gps", "air_condition") 
+  label: string; // Display name from dashboard (e.g. "Bluetooth")
+  value: string; // Unique key (e.g. "bluetooth", "gps", "air_condition")
 }
 
 export interface ICar {

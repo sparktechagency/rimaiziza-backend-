@@ -18,11 +18,10 @@ const upsertRule = async (type: RULE_TYPE, content: string) => {
   return { message, result };
 };
 
-
 const getRuleByType = async (type: RULE_TYPE) => {
   const result = await Rule.findOne({ type });
   if (!result) {
-    return {}
+    return {};
   }
   return result;
 };

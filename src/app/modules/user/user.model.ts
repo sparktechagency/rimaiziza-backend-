@@ -61,7 +61,6 @@ const userSchema = new Schema<IUser, UserModal>(
       address: {
         type: String,
         default: "",
-
       },
     },
     stripeConnectedAccountId: {
@@ -107,9 +106,8 @@ const userSchema = new Schema<IUser, UserModal>(
         return ret;
       },
     },
-  }
+  },
 );
-
 
 //exist user check
 userSchema.statics.isExistUserById = async (id: string) => {
@@ -131,7 +129,7 @@ userSchema.statics.isAccountCreated = async (id: string) => {
 //is match password
 userSchema.statics.isMatchPassword = async (
   password: string,
-  hashPassword: string
+  hashPassword: string,
 ): Promise<boolean> => {
   return await bcrypt.compare(password, hashPassword);
 };
@@ -143,15 +141,14 @@ userSchema.pre("save", async function (next) {
     if (this.password) {
       this.password = await bcrypt.hash(
         this.password,
-        Number(config.bcrypt_salt_rounds)
+        Number(config.bcrypt_salt_rounds),
       );
     }
   } else {
-
     if (this.isModified("password") && this.password) {
       this.password = await bcrypt.hash(
         this.password,
-        Number(config.bcrypt_salt_rounds)
+        Number(config.bcrypt_salt_rounds),
       );
     }
   }

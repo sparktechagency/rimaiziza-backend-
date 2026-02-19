@@ -1,4 +1,4 @@
-1. payment korar age contact information dekhte parbe na, payment korar por contact information visible hobe - aita frontend theke handle hobe 
+1. payment korar age contact information dekhte parbe na, payment korar por contact information visible hobe - aita frontend theke handle hobe
 2. validation korte hobe jeno 24 hours ar niche booking kora na jai min 24 hours book korte hobe
 3. notification baki ase
-4. search a pickup date, time diye filter kora jabe aita baki ase 
+4. search a pickup date, time diye filter kora jabe aita baki ase

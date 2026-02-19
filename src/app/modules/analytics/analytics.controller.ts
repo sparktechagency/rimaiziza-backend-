@@ -25,7 +25,9 @@ const getYearlyRevenueChart = catchAsync(async (req, res) => {
 
 const getYearlyBookingAndUserChart = catchAsync(async (req, res) => {
   const { year } = req.query;
-  const result = await AnalyticsServices.getYearlyBookingAndUserChart(Number(year));
+  const result = await AnalyticsServices.getYearlyBookingAndUserChart(
+    Number(year),
+  );
   sendResponse(res, {
     success: true,
     statusCode: 200,
@@ -68,8 +70,11 @@ const getHostDashboardStats = catchAsync(async (req, res) => {
 const getHostMonthlyEarnings = catchAsync(async (req, res) => {
   const { id: hostId } = req.user as any;
   const { year } = req.query;
-  const result = await AnalyticsServices.getHostMonthlyEarnings(hostId, Number(year));
-  
+  const result = await AnalyticsServices.getHostMonthlyEarnings(
+    hostId,
+    Number(year),
+  );
+
   sendResponse(res, {
     success: true,
     statusCode: 200,
@@ -86,4 +91,4 @@ export const AnalyticsControllers = {
   getBookingSummary,
   getHostDashboardStats,
   getHostMonthlyEarnings,
-}
+};

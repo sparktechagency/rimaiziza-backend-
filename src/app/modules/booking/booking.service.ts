@@ -9,7 +9,10 @@ import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
 import { Transaction } from "../transaction/transaction.model";
 import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
-import { calculateFirstTimeBookingAmount, validateAvailabilityStrictForApproval } from "./booking.utils";
+import {
+  calculateFirstTimeBookingAmount,
+  validateAvailabilityStrictForApproval,
+} from "./booking.utils";
 import { getDynamicCharges } from "../charges/charges.service";
 
 const createBookingToDB = async (payload: any, userId: string) => {
@@ -29,7 +32,9 @@ const createBookingToDB = async (payload: any, userId: string) => {
   if (!car) throw new ApiError(404, "Car not found");
 
   const isSelfBooking = car?.assignedHosts?.toString() === userId;
-  const bookingStatus = isSelfBooking ? BOOKING_STATUS.CONFIRMED : BOOKING_STATUS.REQUESTED;
+  const bookingStatus = isSelfBooking
+    ? BOOKING_STATUS.CONFIRMED
+    : BOOKING_STATUS.REQUESTED;
 
   const totalAmount = calculateFirstTimeBookingAmount(
     new Date(payload.fromDate),
@@ -48,19 +53,12 @@ const createBookingToDB = async (payload: any, userId: string) => {
   return result;
 };
 
-const getHostBookingsFromDB = async (
-  hostId: string,
-  query: any
-) => {
+const getHostBookingsFromDB = async (hostId: string, query: any) => {
   if (!Types.ObjectId.isValid(hostId)) {
     throw new ApiError(400, "Invalid host id");
   }
 
-  const {
-    status,
-    page = 1,
-    limit = 20,
-  } = query;
+  const { status, page = 1, limit = 20 } = query;
 
   const filter: any = {
     hostId: new Types.ObjectId(hostId),
@@ -71,7 +69,9 @@ const getHostBookingsFromDB = async (
     const statuses = status
       .split(",")
       .map((s: any) => s.trim().toUpperCase())
-      .filter((s: any) => Object.values(BOOKING_STATUS).includes(s as BOOKING_STATUS));
+      .filter((s: any) =>
+        Object.values(BOOKING_STATUS).includes(s as BOOKING_STATUS),
+      );
 
     if (!statuses.length) {
       throw new ApiError(400, "Invalid booking status filter");
@@ -106,19 +106,12 @@ const getHostBookingsFromDB = async (
   };
 };
 
-const getUserBookingsFromDB = async (
-  userId: string,
-  query: any
-) => {
+const getUserBookingsFromDB = async (userId: string, query: any) => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new ApiError(400, "Invalid user id");
   }
 
-  const {
-    status,
-    page = 1,
-    limit = 20,
-  } = query;
+  const { status, page = 1, limit = 20 } = query;
 
   const filter: any = {
     userId: new Types.ObjectId(userId),
@@ -130,7 +123,7 @@ const getUserBookingsFromDB = async (
       .split(",")
       .map((s: string) => s.trim().toUpperCase())
       .filter((s: string) =>
-        Object.values(BOOKING_STATUS).includes(s as BOOKING_STATUS)
+        Object.values(BOOKING_STATUS).includes(s as BOOKING_STATUS),
       );
 
     if (!statuses.length) {
@@ -167,11 +160,11 @@ const getUserBookingsFromDB = async (
 
 const approveBookingByHostFromDB = async (
   bookingId: string,
-  hostId: string
+  hostId: string,
 ) => {
   const booking = await Booking.findById(bookingId);
 
-  console.log(bookingId, "BookingId")
+  console.log(bookingId, "BookingId");
 
   if (!booking) throw new ApiError(404, "Booking not found");
 
@@ -191,7 +184,7 @@ const approveBookingByHostFromDB = async (
     booking.carId.toString(),
     booking.fromDate,
     booking.toDate,
-    booking._id.toString()
+    booking._id.toString(),
   );
 
   booking.bookingStatus = BOOKING_STATUS.PENDING;
@@ -203,7 +196,7 @@ const approveBookingByHostFromDB = async (
 const cancelBookingFromDB = async (
   bookingId: string,
   actorId: string,
-  actorRole: USER_ROLES
+  actorRole: USER_ROLES,
 ) => {
   if (!Types.ObjectId.isValid(bookingId)) {
     throw new ApiError(400, "Invalid booking id");
@@ -240,10 +233,7 @@ const cancelBookingFromDB = async (
     }
   } else if (isHostActor) {
     if (!booking.hostId.equals(actorId) || !booking.isSelfBooking) {
-      throw new ApiError(
-        403,
-        "Hosts can cancel only their own self bookings"
-      );
+      throw new ApiError(403, "Hosts can cancel only their own self bookings");
     }
   } else if (!isAdminActor) {
     throw new ApiError(403, "You are not allowed to cancel this booking");
@@ -254,20 +244,28 @@ const cancelBookingFromDB = async (
     ? await Transaction.findById(booking.transactionId)
     : null;
 
-  if (transaction && transaction.status === TRANSACTION_STATUS.SUCCESS && transaction.stripePaymentIntentId) {
+  if (
+    transaction &&
+    transaction.status === TRANSACTION_STATUS.SUCCESS &&
+    transaction.stripePaymentIntentId
+  ) {
     const car = booking.carId as any;
 
     if (!car) throw new ApiError(400, "Car details not found");
 
     const fromDate = new Date(booking.fromDate);
     const toDate = new Date(booking.toDate);
-    const totalDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    const totalDays =
+      Math.ceil(
+        (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24),
+      ) || 1;
 
     const paidAmount = transaction.amount;
     const dailyPrice = car.dailyPrice;
 
     // Get dynamic charges
-    const { platformFee, hostCommission, adminCommission } = await getDynamicCharges({ totalAmount: paidAmount });
+    const { platformFee, hostCommission, adminCommission } =
+      await getDynamicCharges({ totalAmount: paidAmount });
 
     const diffMs = fromDate.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
@@ -277,9 +275,13 @@ const cancelBookingFromDB = async (
     // Cancellation after pickup
     if (now >= fromDate) {
       // Multi-day prorated charge
-      const daysUsed = Math.min(Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)), totalDays);
-      chargeAmount = daysUsed * dailyPrice + platformFee + hostCommission + adminCommission;
-    } 
+      const daysUsed = Math.min(
+        Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)),
+        totalDays,
+      );
+      chargeAmount =
+        daysUsed * dailyPrice + platformFee + hostCommission + adminCommission;
+    }
     // Cancellation < 72 hours before pickup
     else if (diffHours < 72) {
       chargeAmount = dailyPrice;
@@ -333,7 +335,6 @@ const cancelBookingFromDB = async (
 //     throw new ApiError(400, "Self booking does not require payment");
 //   }
 
-
 //   // Re-check availability (race condition safe)
 //   await validateAvailabilityStrict(
 //     booking.carId.toString(),
@@ -348,7 +349,6 @@ const cancelBookingFromDB = async (
 //   return booking;
 // };
 
-
 const getAllBookingsFromDB = async (query: any) => {
   const searchTerm = query.search?.toLowerCase() || "";
   const page = parseInt(query.page || "1", 10);
@@ -362,8 +362,8 @@ const getAllBookingsFromDB = async (query: any) => {
         from: "cars",
         localField: "carId",
         foreignField: "_id",
-        as: "car"
-      }
+        as: "car",
+      },
     },
     { $unwind: { path: "$car", preserveNullAndEmptyArrays: true } },
 
@@ -373,8 +373,8 @@ const getAllBookingsFromDB = async (query: any) => {
         from: "users",
         localField: "hostId",
         foreignField: "_id",
-        as: "host"
-      }
+        as: "host",
+      },
     },
     { $unwind: { path: "$host", preserveNullAndEmptyArrays: true } },
 
@@ -384,8 +384,8 @@ const getAllBookingsFromDB = async (query: any) => {
         from: "users",
         localField: "userId",
         foreignField: "_id",
-        as: "user"
-      }
+        as: "user",
+      },
     },
     { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
   ];
@@ -403,22 +403,28 @@ const getAllBookingsFromDB = async (query: any) => {
           { "host.email": { $regex: searchTerm, $options: "i" } },
           { "user.name": { $regex: searchTerm, $options: "i" } },
           { "user.email": { $regex: searchTerm, $options: "i" } },
-        ]
-      }
+        ],
+      },
     });
   }
 
   // Booking status filter
-  if (query.bookingStatus && Object.values(BOOKING_STATUS).includes(query.bookingStatus)) {
+  if (
+    query.bookingStatus &&
+    Object.values(BOOKING_STATUS).includes(query.bookingStatus)
+  ) {
     aggregationPipeline.push({
       $match: {
-        bookingStatus: query.bookingStatus
-      }
+        bookingStatus: query.bookingStatus,
+      },
     });
   }
 
   // Count total before pagination
-  const totalMeta = await Booking.aggregate([...aggregationPipeline, { $count: "total" }]);
+  const totalMeta = await Booking.aggregate([
+    ...aggregationPipeline,
+    { $count: "total" },
+  ]);
   const total = totalMeta[0]?.total || 0;
 
   // Apply sort if provided
@@ -439,15 +445,15 @@ const getAllBookingsFromDB = async (query: any) => {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     },
-    bookings
+    bookings,
   };
 };
 
- const getSelfBookingsByHost = async (
+const getSelfBookingsByHost = async (
   hostId: string,
-  status?: BOOKING_STATUS
+  status?: BOOKING_STATUS,
 ) => {
   if (!hostId || !Types.ObjectId.isValid(hostId)) {
     throw new ApiError(400, "Invalid hostId");
@@ -468,7 +474,6 @@ const getAllBookingsFromDB = async (query: any) => {
   return bookings;
 };
 
-
 export const BookingServices = {
   createBookingToDB,
   getHostBookingsFromDB,
@@ -478,4 +483,4 @@ export const BookingServices = {
   // confirmBookingAfterPaymentFromDB,
   getAllBookingsFromDB,
   getSelfBookingsByHost,
-}
+};

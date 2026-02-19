@@ -9,7 +9,7 @@ export interface IReview {
   _id?: Types.ObjectId;
 
   reviewForId: Types.ObjectId; // যাকে review দেওয়া হচ্ছে (host or user)
-  reviewById: Types.ObjectId;  // যিনি review দিয়েছেন (user or host)
+  reviewById: Types.ObjectId; // যিনি review দিয়েছেন (user or host)
 
   ratingValue: number; // 1 to 5
   feedback?: string;

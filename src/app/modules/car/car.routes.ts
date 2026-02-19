@@ -11,9 +11,7 @@ router
   .route("/nearby")
   .get(auth(USER_ROLES.USER), CarControllers.getNearbyCars);
 
-router
-  .route("/host")
-  .get(auth(USER_ROLES.HOST), CarControllers.getCarsByHost);
+router.route("/host").get(auth(USER_ROLES.HOST), CarControllers.getCarsByHost);
 
 router
   .route("/user/:id")
@@ -46,8 +44,8 @@ router
       { fieldName: "images", forceMultiple: true },
       { fieldName: "coverImage", forceSingle: true },
     ),
-    CarControllers.updateCarById)
+    CarControllers.updateCarById,
+  )
   .delete(auth(USER_ROLES.SUPER_ADMIN), CarControllers.deleteCarById);
-
 
 export const CarRoutes = router;

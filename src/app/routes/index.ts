@@ -28,7 +28,6 @@ const router = express.Router();
 //   }
 // }
 
-
 const apiRoutes = [
   {
     path: "/users",

@@ -15,4 +15,3 @@ const calculatePrice = (fromDate: string, toDate: string) => {
 };
 
 export { calculatePrice };
-

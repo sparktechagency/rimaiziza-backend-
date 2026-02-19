@@ -1,6 +1,9 @@
 import { BOOKING_STATUS } from "../../app/modules/booking/booking.interface";
 import { Booking } from "../../app/modules/booking/booking.model";
-import { TRANSACTION_STATUS, TRANSACTION_TYPE } from "../../app/modules/transaction/transaction.interface";
+import {
+  TRANSACTION_STATUS,
+  TRANSACTION_TYPE,
+} from "../../app/modules/transaction/transaction.interface";
 import { Transaction } from "../../app/modules/transaction/transaction.model";
 import { User } from "../../app/modules/user/user.model";
 import stripe from "../../config/stripe";
@@ -9,7 +12,9 @@ import stripe from "../../config/stripe";
 
 /** Handle checkout.session.completed → confirm booking */
 export const handleCheckoutSessionCompleted = async (session: any) => {
-  const transaction = await Transaction.findById(session.metadata.transactionId);
+  const transaction = await Transaction.findById(
+    session.metadata.transactionId,
+  );
   if (!transaction) return;
 
   // Update transaction
@@ -21,11 +26,14 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
   const booking = await Booking.findOneAndUpdate(
     { _id: transaction.bookingId, bookingStatus: BOOKING_STATUS.PENDING },
     { bookingStatus: BOOKING_STATUS.CONFIRMED, transactionId: transaction._id },
-    { new: true }
+    { new: true },
   );
 
   if (booking) console.log(`✅ Booking ${booking._id} confirmed`);
-  else console.log(`⚠ Booking ${transaction.bookingId} already confirmed or invalid state`);
+  else
+    console.log(
+      `⚠ Booking ${transaction.bookingId} already confirmed or invalid state`,
+    );
 };
 
 // Handle extend booking success
@@ -49,7 +57,11 @@ export const handleExtendBookingSuccess = async (session: any) => {
   if (!booking) return;
 
   // Booking must be active
-  if (![BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING].includes(booking.bookingStatus)) {
+  if (
+    ![BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING].includes(
+      booking.bookingStatus,
+    )
+  ) {
     console.log("Booking not in extendable state");
     return;
   }
@@ -95,11 +107,14 @@ export const handleExtendBookingSuccess = async (session: any) => {
 const handleAccountUpdated = async (account: any) => {
   console.log("Webhook received: account.updated");
 
-  if (account.charges_enabled && account.requirements?.currently_due?.length === 0) {
+  if (
+    account.charges_enabled &&
+    account.requirements?.currently_due?.length === 0
+  ) {
     const host = await User.findOneAndUpdate(
       { stripeConnectedAccountId: account.id, isStripeOnboarded: false },
       { isStripeOnboarded: true },
-      { new: true }
+      { new: true },
     );
 
     if (host) console.log(`✅ Host onboarded: ${host._id}`);
@@ -121,7 +136,7 @@ export const handleStripeWebhook = async (req: any, res: any) => {
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET!,
     );
   } catch (err: any) {
     console.error("Webhook signature verification failed:", err.message);
@@ -132,7 +147,9 @@ export const handleStripeWebhook = async (req: any, res: any) => {
     switch (event.type) {
       case "checkout.session.completed":
         const session = event.data.object;
-        const transaction = await Transaction.findById(session.metadata.transactionId);
+        const transaction = await Transaction.findById(
+          session.metadata.transactionId,
+        );
         if (!transaction) break;
 
         if (transaction.type === TRANSACTION_TYPE.EXTEND) {
@@ -164,9 +181,13 @@ export const markBookingOngoing = async (bookingId: string) => {
   if (!booking) return;
 
   const now = new Date();
-  if ((booking.bookingStatus === BOOKING_STATUS.CONFIRMED || booking.isSelfBooking) &&
-    booking.fromDate <= now && booking.toDate > now &&
-    !booking.isCanceledByUser && !booking.isCanceledByHost
+  if (
+    (booking.bookingStatus === BOOKING_STATUS.CONFIRMED ||
+      booking.isSelfBooking) &&
+    booking.fromDate <= now &&
+    booking.toDate > now &&
+    !booking.isCanceledByUser &&
+    !booking.isCanceledByHost
   ) {
     booking.bookingStatus = BOOKING_STATUS.ONGOING;
     booking.checkedInAt = now;
@@ -184,34 +205,53 @@ export const markBookingCompleted = async (bookingId: string) => {
   if (!booking) return;
 
   const now = new Date();
-  if (booking.bookingStatus === BOOKING_STATUS.ONGOING && booking.toDate <= now) {
+  if (
+    booking.bookingStatus === BOOKING_STATUS.ONGOING &&
+    booking.toDate <= now
+  ) {
     booking.bookingStatus = BOOKING_STATUS.COMPLETED;
     booking.checkedOutAt = now;
 
     // Schedule deposit refund 3 days later
-    booking.depositRefundableAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    booking.depositRefundableAt = new Date(
+      now.getTime() + 3 * 24 * 60 * 60 * 1000,
+    );
     booking.isDepositRefunded = false;
 
     await booking.save();
-    console.log(`Booking ${booking._id} marked COMPLETED, deposit refund scheduled`);
+    console.log(
+      `Booking ${booking._id} marked COMPLETED, deposit refund scheduled`,
+    );
 
     // ------------------ HOST COMMISSION TRANSFER ------------------
     const transaction = booking.transactionId as any;
     const host = booking.hostId as any;
 
-    if (transaction && host?.stripeConnectedAccountId && transaction.charges?.hostCommission) {
+    if (
+      transaction &&
+      host?.stripeConnectedAccountId &&
+      transaction.charges?.hostCommission
+    ) {
       try {
         await stripe.transfers.create({
           amount: Math.round(transaction.charges.hostCommission * 100), // cents
           currency: process.env.CURRENCY!,
           destination: host.stripeConnectedAccountId,
           description: `Host commission for booking ${booking._id}`,
-          metadata: { bookingId: booking._id.toString(), transactionId: transaction._id.toString() },
+          metadata: {
+            bookingId: booking._id.toString(),
+            transactionId: transaction._id.toString(),
+          },
         });
 
-        console.log(`✅ Host commission transferred for booking ${booking._id}`);
+        console.log(
+          `✅ Host commission transferred for booking ${booking._id}`,
+        );
       } catch (err: any) {
-        console.error(`Failed to transfer host commission for booking ${booking._id}:`, err.message);
+        console.error(
+          `Failed to transfer host commission for booking ${booking._id}:`,
+          err.message,
+        );
       }
     }
   }
@@ -219,7 +259,9 @@ export const markBookingCompleted = async (bookingId: string) => {
 
 /** Refund deposit if eligible (3 days after completion) */
 export const refundDepositIfEligible = async (bookingId: string) => {
-  const booking = await Booking.findById(bookingId).populate("carId").populate("transactionId");
+  const booking = await Booking.findById(bookingId)
+    .populate("carId")
+    .populate("transactionId");
   if (!booking) return;
 
   const now = new Date();
@@ -241,7 +283,10 @@ export const refundDepositIfEligible = async (bookingId: string) => {
 
     console.log(`Deposit refunded for booking ${booking._id}`);
   } catch (err: any) {
-    console.error(`Failed to refund deposit for booking ${booking._id}:`, err.message);
+    console.error(
+      `Failed to refund deposit for booking ${booking._id}:`,
+      err.message,
+    );
   }
 };
 
@@ -262,7 +307,10 @@ export const bookingStatusCronJob = async () => {
     try {
       await markBookingOngoing(booking._id.toString());
     } catch (err: any) {
-      console.warn(`Cannot move self booking ${booking._id} to ONGOING:`, err.message);
+      console.warn(
+        `Cannot move self booking ${booking._id} to ONGOING:`,
+        err.message,
+      );
     }
   }
 
@@ -278,7 +326,10 @@ export const bookingStatusCronJob = async () => {
     try {
       await markBookingOngoing(booking._id.toString());
     } catch (err: any) {
-      console.warn(`Cannot move booking ${booking._id} to ONGOING:`, err.message);
+      console.warn(
+        `Cannot move booking ${booking._id} to ONGOING:`,
+        err.message,
+      );
     }
   }
 
@@ -294,7 +345,10 @@ export const bookingStatusCronJob = async () => {
     try {
       await markBookingCompleted(booking._id.toString());
     } catch (err: any) {
-      console.warn(`Cannot move booking ${booking._id} to COMPLETED:`, err.message);
+      console.warn(
+        `Cannot move booking ${booking._id} to COMPLETED:`,
+        err.message,
+      );
     }
   }
 
@@ -309,8 +363,10 @@ export const bookingStatusCronJob = async () => {
     try {
       await refundDepositIfEligible(booking._id.toString());
     } catch (err: any) {
-      console.warn(`Failed to refund deposit for booking ${booking._id}:`, err.message);
+      console.warn(
+        `Failed to refund deposit for booking ${booking._id}:`,
+        err.message,
+      );
     }
   }
 };
-

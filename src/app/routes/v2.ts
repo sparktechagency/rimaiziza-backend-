@@ -1,17 +1,14 @@
-import express from 'express';
-import { UserRoutes } from '../modules/user/user.routes';
-
+import express from "express";
+import { UserRoutes } from "../modules/user/user.routes";
 
 const v2Router = express.Router();
 
 const apiRoutes = [
-    {
-        path: "/users",
-        route: UserRoutes
-    }
+  {
+    path: "/users",
+    route: UserRoutes,
+  },
 ];
-
-
 
 apiRoutes.forEach((route) => v2Router.use(route.path, route.route));
 

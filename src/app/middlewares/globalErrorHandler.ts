@@ -33,44 +33,44 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     message = "Session Expired";
     errorMessages = error?.message
       ? [
-        {
-          path: "",
-          message:
-            "Your session has expired. Please log in again to continue.",
-        },
-      ]
+          {
+            path: "",
+            message:
+              "Your session has expired. Please log in again to continue.",
+          },
+        ]
       : [];
   } else if (error.name === "JsonWebTokenError") {
     statusCode = StatusCodes.UNAUTHORIZED;
     message = "Invalid Token";
     errorMessages = error?.message
       ? [
-        {
-          path: "",
-          message: "Your token is invalid. Please log in again to continue.",
-        },
-      ]
+          {
+            path: "",
+            message: "Your token is invalid. Please log in again to continue.",
+          },
+        ]
       : [];
   } else if (error instanceof ApiError) {
     statusCode = error.statusCode;
     message = error.message;
     errorMessages = error.message
       ? [
-        {
-          path: "",
-          message: error.message,
-        },
-      ]
+          {
+            path: "",
+            message: error.message,
+          },
+        ]
       : [];
   } else if (error instanceof Error) {
     message = error.message;
     errorMessages = error.message
       ? [
-        {
-          path: "",
-          message: error?.message,
-        },
-      ]
+          {
+            path: "",
+            message: error?.message,
+          },
+        ]
       : [];
   }
 
@@ -94,8 +94,6 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     errorMessages,
     stack: config.node_env !== "production" ? error?.stack : undefined,
   });
-
-
 };
 
 export default globalErrorHandler;

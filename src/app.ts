@@ -8,15 +8,16 @@ import path from "path";
 import v2Router from "./app/routes/v2";
 import { handleStripeWebhook } from "./helpers/webhooks/handleStripeWebhook";
 
-
-
 const app: Application = express();
-
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-app.post('/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+app.post(
+  "/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook,
+);
 
 // morgan
 app.use(Morgan.successHandler);
@@ -25,16 +26,18 @@ app.use(Morgan.errorHandler);
 //body parser
 app.use(
   cors({
-    origin: ["http://10.10.7.46:30011", "http://10.10.7.41:5003", "http://10.10.7.46:3014"],
+    origin: [
+      "http://10.10.7.46:30011",
+      "http://10.10.7.41:5003",
+      "http://10.10.7.46:3014",
+    ],
     credentials: true,
   }),
 );
 
-
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-
 
 //file retrieve
 app.use(express.static("uploads"));
@@ -46,8 +49,6 @@ router.use("/api/v2", v2Router);
 app.get("/", (req: Request, res: Response) => {
   res.send("Server is running...");
 });
-
-
 
 // handle not found route
 app.use((req: Request, res: Response) => {

@@ -15,7 +15,7 @@ const createFaqToDB = async (payload: TFaq) => {
 
 const faqsFromDB = async () => {
   const faqs = await Faq.find({});
-  if(!faqs || faqs.length === 0){
+  if (!faqs || faqs.length === 0) {
     throw new ApiError(StatusCodes.NOT_FOUND, "No Faqs found");
   }
   return faqs;

@@ -1,29 +1,29 @@
-import express, { NextFunction, Request, Response } from 'express';
-import auth from '../../middlewares/auth';
-import validateRequest from '../../middlewares/validateRequest';
-import { AuthController } from './auth.controller';
-import { AuthValidation } from './auth.validation';
-import { USER_ROLES } from '../../../enums/user';
+import express, { NextFunction, Request, Response } from "express";
+import auth from "../../middlewares/auth";
+import validateRequest from "../../middlewares/validateRequest";
+import { AuthController } from "./auth.controller";
+import { AuthValidation } from "./auth.validation";
+import { USER_ROLES } from "../../../enums/user";
 const router = express.Router();
 
 router.post(
-  '/login',
+  "/login",
   validateRequest(AuthValidation.createLoginZodSchema),
   AuthController.loginUser,
 );
 
 router.post(
-  '/forget-password',
+  "/forget-password",
   validateRequest(AuthValidation.createForgetPasswordZodSchema),
   AuthController.forgetPassword,
 );
 
-router.post('/refresh-token', AuthController.newAccessToken);
+router.post("/refresh-token", AuthController.newAccessToken);
 
-router.post('/resend-otp', AuthController.resendVerificationEmail);
+router.post("/resend-otp", AuthController.resendVerificationEmail);
 
 router.post(
-  '/verify-email',
+  "/verify-email",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, oneTimeCode } = req.body;
@@ -33,7 +33,7 @@ router.post(
     } catch (error) {
       return res
         .status(500)
-        .json({ message: 'Failed to convert string to number' });
+        .json({ message: "Failed to convert string to number" });
     }
   },
   validateRequest(AuthValidation.createVerifyEmailZodSchema),
@@ -41,28 +41,33 @@ router.post(
 );
 
 router.post(
-  '/reset-password',
+  "/reset-password",
   validateRequest(AuthValidation.createResetPasswordZodSchema),
   AuthController.resetPassword,
 );
 
 router.post(
-  '/change-password',
+  "/change-password",
   auth(
     USER_ROLES.ADMIN,
     USER_ROLES.HOST,
     USER_ROLES.USER,
-    USER_ROLES.SUPER_ADMIN
+    USER_ROLES.SUPER_ADMIN,
   ),
   validateRequest(AuthValidation.createChangePasswordZodSchema),
   AuthController.changePassword,
 );
 
-router.post('/resend-otp', AuthController.resendVerificationEmail);
+router.post("/resend-otp", AuthController.resendVerificationEmail);
 
 router.delete(
-  '/delete-account',
-  auth(USER_ROLES.ADMIN, USER_ROLES.HOST, USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  "/delete-account",
+  auth(
+    USER_ROLES.ADMIN,
+    USER_ROLES.HOST,
+    USER_ROLES.USER,
+    USER_ROLES.SUPER_ADMIN,
+  ),
   AuthController.deleteUser,
 );
 

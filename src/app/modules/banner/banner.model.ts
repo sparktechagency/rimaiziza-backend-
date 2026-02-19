@@ -1,7 +1,6 @@
 import { model, Schema } from "mongoose";
 import { TBanner } from "./banner.interface";
 
-
 const bannerSchema = new Schema<TBanner>(
   {
     name: {

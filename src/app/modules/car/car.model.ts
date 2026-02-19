@@ -171,8 +171,8 @@ const CarSchema = new Schema<ICar>(
     ],
     facilities: [
       {
-        label: { type: String, required: true },  // Display name from dashboard (e.g. "Bluetooth")
-        value: { type: String, required: true },  // Unique key (e.g. "bluetooth", "gps", "air_condition") 
+        label: { type: String, required: true }, // Display name from dashboard (e.g. "Bluetooth")
+        value: { type: String, required: true }, // Unique key (e.g. "bluetooth", "gps", "air_condition")
       },
     ],
     availableHours: [
@@ -260,7 +260,6 @@ const CarSchema = new Schema<ICar>(
 
 // 2dsphere index for location-based queries (e.g., find cars near me)
 CarSchema.index({ pickupPoint: "2dsphere" });
-
 
 // Model
 export const Car = model<ICar>("Car", CarSchema);

@@ -27,21 +27,18 @@ const createUser = catchAsync(
 );
 
 // register admin
-const createAdmin = catchAsync(
-  async (req, res) => {
+const createAdmin = catchAsync(async (req, res) => {
+  const userData = req.body;
+  console.log(userData, "payload");
+  const result = await UserService.createAdminToDB(userData);
 
-    const userData = req.body;
-    console.log(userData, "payload");
-    const result = await UserService.createAdminToDB(userData);
-
-    sendResponse(res, {
-      success: true,
-      statusCode: StatusCodes.OK,
-      message: "Admin created successfully",
-      data: result,
-    });
-  },
-);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Admin created successfully",
+    data: result,
+  });
+});
 
 const getAdmin = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.getAdminFromDB(req.query);
@@ -132,7 +129,6 @@ const ghostLoginAsHost = catchAsync(async (req, res) => {
   });
 });
 
-
 const getAllHosts = catchAsync(async (req, res) => {
   const result = await UserService.getAllHostFromDB(req.query);
 
@@ -156,7 +152,6 @@ const getHostById = catchAsync(async (req, res) => {
     data: result,
   });
 });
-
 
 const updateHostStatusById = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -194,9 +189,7 @@ const getTotalUsersAndHosts = catchAsync(async (req, res) => {
     message: "Successfully retrieved total users and hosts",
     data: result,
   });
-})
-
-
+});
 
 const switchProfile = catchAsync(async (req, res) => {
   const { role } = req.body;
@@ -210,7 +203,6 @@ const switchProfile = catchAsync(async (req, res) => {
     data: result,
   });
 });
-
 
 const getAllUsers = catchAsync(async (req, res) => {
   const result = await UserService.getAllUsersFromDB(req.query);
@@ -235,8 +227,6 @@ const getUserById = catchAsync(async (req, res) => {
     data: result,
   });
 });
-
-
 
 const updateUserStatusById = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -282,21 +272,19 @@ const deleteUserById = catchAsync(async (req, res) => {
 });
 
 const deleteProfile = catchAsync(async (req, res) => {
-     const { id }: any = req.user;
-     // console.log(id, "ID");
-     const { password } = req.body;
+  const { id }: any = req.user;
+  // console.log(id, "ID");
+  const { password } = req.body;
 
-     const result = await UserService.deleteProfileFromDB(id, password);
+  const result = await UserService.deleteProfileFromDB(id, password);
 
-     sendResponse(res, {
-          success: true,
-          statusCode: StatusCodes.OK,
-          message: 'Profile deleted successfully',
-          data: result,
-     });
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Profile deleted successfully",
+    data: result,
+  });
 });
-
-
 
 export const UserController = {
   createUser,

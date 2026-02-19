@@ -8,11 +8,13 @@ import { CarServices } from "./car.service";
 import ApiError from "../../../errors/ApiErrors";
 import { Car } from "./car.model";
 
-export const getTargetLocation = async (queryLat?: string | number, queryLng?: string | number, userId?: string) => {
-
+export const getTargetLocation = async (
+  queryLat?: string | number,
+  queryLng?: string | number,
+  userId?: string,
+) => {
   let lat = queryLat ? Number(queryLat) : null;
   let lng = queryLng ? Number(queryLng) : null;
-
 
   if ((!lat || !lng) && userId) {
     const user = await User.findById(userId).select("location");
@@ -28,13 +30,12 @@ export const getTargetLocation = async (queryLat?: string | number, queryLng?: s
     lat = 21.8103;
   }
 
-
   return { lat, lng };
 };
 
 export const attachFavoriteToCar = async (
   car: ICar,
-  userId?: string
+  userId?: string,
 ): Promise<ICar & { isFavorite: boolean }> => {
   if (!userId || !Types.ObjectId.isValid(userId)) {
     return { ...car, isFavorite: false };
@@ -48,7 +49,10 @@ export const attachFavoriteToCar = async (
   return { ...car, isFavorite: !!favorite };
 };
 
-export const checkCarAvailabilityByDate = async (car: any, targetDate: Date) => {
+export const checkCarAvailabilityByDate = async (
+  car: any,
+  targetDate: Date,
+) => {
   // Car inactive
   if (!car.isActive) return false;
 
@@ -64,7 +68,7 @@ export const checkCarAvailabilityByDate = async (car: any, targetDate: Date) => 
   // Check blockedDates
   const dateString = targetDate.toISOString().split("T")[0];
   const isBlocked = car.blockedDates?.some(
-    (b: any) => new Date(b.date).toISOString().split("T")[0] === dateString
+    (b: any) => new Date(b.date).toISOString().split("T")[0] === dateString,
   );
   if (isBlocked) return false;
 
@@ -79,7 +83,6 @@ export const checkCarAvailabilityByDate = async (car: any, targetDate: Date) => 
   return !bookingConflict;
 };
 
-
 export const getCarCalendar = async (carId: string) => {
   const calendar = [];
   const today = new Date();
@@ -92,21 +95,24 @@ export const getCarCalendar = async (carId: string) => {
     // if any slot is available for that date
     const availability = await CarServices.getAvailability(carId, dateString);
 
-
     // if at least `1` slot is available
-    const isAnySlotAvailable = availability.slots.some(slot => slot.isAvailable === true);
+    const isAnySlotAvailable = availability.slots.some(
+      (slot) => slot.isAvailable === true,
+    );
 
     calendar.push({
       date: dateString,
       available: isAnySlotAvailable,
-      reason: availability.blockedReason || (isAnySlotAvailable ? "" : "Fully Booked"),
+      reason:
+        availability.blockedReason ||
+        (isAnySlotAvailable ? "" : "Fully Booked"),
     });
   }
   return calendar;
 };
 
 export const getCarTripCount = async (
-  carId: Types.ObjectId | string
+  carId: Types.ObjectId | string,
 ): Promise<number> => {
   const count = await Booking.countDocuments({
     carId: new Types.ObjectId(carId),
@@ -120,7 +126,7 @@ export const getCarTripCount = async (
 
 // bulk car trip
 export const getCarTripCountMap = async (
-  carIds: Types.ObjectId[]
+  carIds: Types.ObjectId[],
 ): Promise<Record<string, number>> => {
   const result = await Booking.aggregate([
     {
@@ -150,13 +156,15 @@ export const getCarTripCountMap = async (
 export const getLocalDetails = (date: Date) => {
   // Use System Local Time
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
   return {
     dateStr: `${year}-${month}-${day}`,
     hour: date.getHours(),
-    weekday: date.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase()
+    weekday: date
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .toUpperCase(),
   };
 };
 
@@ -165,7 +173,10 @@ interface RequestedHour {
   hour: number; // 0-23 Local
 }
 
-export const generateRequestedHours = (from: Date, to: Date): RequestedHour[] => {
+export const generateRequestedHours = (
+  from: Date,
+  to: Date,
+): RequestedHour[] => {
   const hours: RequestedHour[] = [];
 
   const cursor = new Date(from); // ensure Date object
@@ -191,16 +202,16 @@ export const generateRequestedHours = (from: Date, to: Date): RequestedHour[] =>
 export const validateAvailabilityStrict = async (
   carId: string,
   from: Date,
-  to: Date
+  to: Date,
 ) => {
   if (from >= to) throw new ApiError(400, "Invalid booking time range");
 
   // Fetch car
   const car = await Car.findById(carId).select(
-    "isActive availableDays availableHours defaultStartTime defaultEndTime blockedDates"
+    "isActive availableDays availableHours defaultStartTime defaultEndTime blockedDates",
   );
 
-  console.log(car, "CAR")
+  console.log(car, "CAR");
 
   if (!car) throw new ApiError(404, "Car not found");
   if (!car.isActive) throw new ApiError(400, "Car is not active");
@@ -214,23 +225,29 @@ export const validateAvailabilityStrict = async (
 
   const requestedSlots = generateRequestedHours(fromDate, toDate);
 
-  console.log(requestedSlots, "REQUESTED SLOTS")
+  console.log(requestedSlots, "REQUESTED SLOTS");
   // Group slots by date
-  const dateMap = requestedSlots.reduce((map: Record<string, number[]>, slot) => {
-    if (!map[slot.date]) map[slot.date] = [];
-    map[slot.date].push(slot.hour);
-    return map;
-  }, {});
+  const dateMap = requestedSlots.reduce(
+    (map: Record<string, number[]>, slot) => {
+      if (!map[slot.date]) map[slot.date] = [];
+      map[slot.date].push(slot.hour);
+      return map;
+    },
+    {},
+  );
 
-  console.log(dateMap, "DATE MAP")
+  console.log(dateMap, "DATE MAP");
 
   for (const [date, hours] of Object.entries(dateMap)) {
     // 1️⃣ Check blockedDates
     const blockedEntry = car.blockedDates?.find(
-      (b: any) => new Date(b.date).toISOString().split("T")[0] === date
+      (b: any) => new Date(b.date).toISOString().split("T")[0] === date,
     );
     if (blockedEntry) {
-      throw new ApiError(400, `Car blocked on ${date}: ${blockedEntry.reason || "Blocked by host"}`);
+      throw new ApiError(
+        400,
+        `Car blocked on ${date}: ${blockedEntry.reason || "Blocked by host"}`,
+      );
     }
 
     // 2️⃣ Check availableDays
@@ -242,7 +259,7 @@ export const validateAvailabilityStrict = async (
       throw new ApiError(400, `Car not available on ${date} (${dayName})`);
     }
 
-    console.log(dayName, "DAY NAME")
+    console.log(dayName, "DAY NAME");
 
     // 3️⃣ Build openHoursSet
     const openHoursSet = new Set<number>();
@@ -265,30 +282,34 @@ export const validateAvailabilityStrict = async (
     const [y, m, d] = date.split("-").map(Number);
     const dateObj = new Date(y, m - 1, d, 0, 0, 0, 0); // Local 00:00:00
 
-    const dateStart = new Date(dateObj); 
+    const dateStart = new Date(dateObj);
     dateStart.setDate(dateStart.getDate() - 1); // -1 day
-    
+
     const dateEnd = new Date(dateObj);
     dateEnd.setDate(dateEnd.getDate() + 2); // +2 days
 
     const bookings = await Booking.find({
       carId: new Types.ObjectId(carId),
-      bookingStatus: { $in: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING] },
+      bookingStatus: {
+        $in: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING],
+      },
       fromDate: { $lt: dateEnd },
       toDate: { $gt: dateStart },
     }).select("fromDate toDate");
 
     // Build booked hours (Local)
     const bookedHours = new Set<number>();
-    bookings.forEach(b => {
-      const bStart = new Date(Math.max(b.fromDate.getTime(), dateStart.getTime()));
+    bookings.forEach((b) => {
+      const bStart = new Date(
+        Math.max(b.fromDate.getTime(), dateStart.getTime()),
+      );
       const bEnd = new Date(Math.min(b.toDate.getTime(), dateEnd.getTime()));
       const cursor = new Date(bStart);
       while (cursor < bEnd) {
         const local = getLocalDetails(cursor);
         // Only mark as booked if it matches the current checking date
         if (local.dateStr === date) {
-           bookedHours.add(local.hour);
+          bookedHours.add(local.hour);
         }
         cursor.setTime(cursor.getTime() + 60 * 60 * 1000);
       }
@@ -297,10 +318,16 @@ export const validateAvailabilityStrict = async (
     // 5️⃣ Validate requested hours
     for (const hour of hours) {
       if (!openHoursSet.has(hour)) {
-        throw new ApiError(400, `Car not available on ${date} at ${String(hour).padStart(2, "0")}:00 (outside operating hours)`);
+        throw new ApiError(
+          400,
+          `Car not available on ${date} at ${String(hour).padStart(2, "0")}:00 (outside operating hours)`,
+        );
       }
       if (bookedHours.has(hour)) {
-        throw new ApiError(400, `Car already booked on ${date} at ${String(hour).padStart(2, "0")}:00`);
+        throw new ApiError(
+          400,
+          `Car already booked on ${date} at ${String(hour).padStart(2, "0")}:00`,
+        );
       }
     }
   }

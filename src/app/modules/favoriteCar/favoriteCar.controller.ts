@@ -16,7 +16,7 @@ const toggleFavorite = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: result.message || "Favorite toggled successfully", 
+    message: result.message || "Favorite toggled successfully",
     data: result,
   });
 });

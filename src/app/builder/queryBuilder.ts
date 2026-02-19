@@ -25,8 +25,12 @@ class QueryBuilder<T> {
 
     // ObjectId exact match
     if (Types.ObjectId.isValid(searchTerm)) {
-      orConditions.push({ _id: new Types.ObjectId(searchTerm) } as FilterQuery<T>);
-      orConditions.push({ bookingId: new Types.ObjectId(searchTerm) } as FilterQuery<T>);
+      orConditions.push({
+        _id: new Types.ObjectId(searchTerm),
+      } as FilterQuery<T>);
+      orConditions.push({
+        bookingId: new Types.ObjectId(searchTerm),
+      } as FilterQuery<T>);
     }
 
     this.modelQuery = this.modelQuery.find({ $or: orConditions });
@@ -42,7 +46,9 @@ class QueryBuilder<T> {
     // HISTORY special case
     if (queryObj.status === "HISTORY") {
       delete queryObj.status;
-      this.modelQuery = this.modelQuery.where("status").in(["CANCELLED", "COMPLETED"]);
+      this.modelQuery = this.modelQuery
+        .where("status")
+        .in(["CANCELLED", "COMPLETED"]);
     }
 
     // Boolean & Date filters (for Booking)
@@ -56,8 +62,10 @@ class QueryBuilder<T> {
     ["fromDate", "toDate"].forEach((field) => {
       if (queryObj[field]) {
         const date = new Date(queryObj[field] as string);
-        if (field === "fromDate") this.modelQuery = this.modelQuery.where("fromDate").gte(date);
-        if (field === "toDate") this.modelQuery = this.modelQuery.where("toDate").lte(date);
+        if (field === "fromDate")
+          this.modelQuery = this.modelQuery.where("fromDate").gte(date);
+        if (field === "toDate")
+          this.modelQuery = this.modelQuery.where("toDate").lte(date);
         delete queryObj[field];
       }
     });
@@ -71,7 +79,8 @@ class QueryBuilder<T> {
 
   // ↕️ Sort
   sort() {
-    const sort = (this.query.sort as string)?.split(",").join(" ") || "-createdAt";
+    const sort =
+      (this.query.sort as string)?.split(",").join(" ") || "-createdAt";
     this.modelQuery = this.modelQuery.sort(sort);
     return this;
   }
@@ -87,7 +96,8 @@ class QueryBuilder<T> {
 
   // 📌 Field Selection
   fields() {
-    const fields = (this.query.fields as string)?.split(",").join(" ") || "-__v";
+    const fields =
+      (this.query.fields as string)?.split(",").join(" ") || "-__v";
     this.modelQuery = this.modelQuery.select(fields);
     return this;
   }

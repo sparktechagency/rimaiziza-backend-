@@ -4,9 +4,7 @@ import sendResponse from "../../../shared/sendResponse";
 import { Car } from "./car.model";
 import { CarServices } from "./car.service";
 
-
 const createCar = catchAsync(async (req, res) => {
-
   const carData = req.body;
 
   const result = await CarServices.createCarToDB(carData);
@@ -97,7 +95,7 @@ const getCarByIdForUser = catchAsync(async (req, res) => {
     message: "Successfully retrieved car by id for user",
     data: result,
   });
-})
+});
 
 const getAvailability = catchAsync(async (req, res) => {
   const { carId } = req.params;
@@ -145,8 +143,6 @@ const getCarsByHost = catchAsync(async (req, res) => {
     data: result,
   });
 });
-
-
 
 export const CarControllers = {
   createCar,

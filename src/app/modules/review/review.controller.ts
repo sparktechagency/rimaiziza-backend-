@@ -5,7 +5,7 @@ import { REVIEW_TARGET_TYPE } from "./review.interface";
 
 // POST /reviews
 const createReview = catchAsync(async (req, res) => {
-  const {id: reviewById} = req.user as any; // logged-in user/host
+  const { id: reviewById } = req.user as any; // logged-in user/host
   const payload = req.body;
 
   // Validate required fields
@@ -33,13 +33,17 @@ const getReviewSummary = catchAsync(async (req, res) => {
   }
 
   // Ensure reviewType is valid
-  if (![REVIEW_TARGET_TYPE.HOST, REVIEW_TARGET_TYPE.USER].includes(reviewType as REVIEW_TARGET_TYPE)) {
+  if (
+    ![REVIEW_TARGET_TYPE.HOST, REVIEW_TARGET_TYPE.USER].includes(
+      reviewType as REVIEW_TARGET_TYPE,
+    )
+  ) {
     throw new Error("Invalid reviewType. Must be HOST or USER");
   }
 
   const result = await ReviewServices.getReviewSummary(
     reviewForId as string,
-    reviewType as REVIEW_TARGET_TYPE
+    reviewType as REVIEW_TARGET_TYPE,
   );
 
   sendResponse(res, {

@@ -8,48 +8,42 @@ import validateRequest from "../../middlewares/validateRequest";
 import parseAllFilesData from "../../middlewares/parseAllFileData";
 import { BannerZodValidation } from "./banner.validation";
 
-
 const router = express.Router();
 
 router
-    .route("/")
-    .post(
-        auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-        fileUploadHandler(),
-        parseAllFilesData(
-            { fieldName: FOLDER_NAMES.IMAGE, forceSingle: true }
-        ),
-        validateRequest(BannerZodValidation.createBannerValidationSchema),
-        BannerController.createBanner,
-    )
-    .get(BannerController.getBannersFromDB);
+  .route("/")
+  .post(
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    fileUploadHandler(),
+    parseAllFilesData({ fieldName: FOLDER_NAMES.IMAGE, forceSingle: true }),
+    validateRequest(BannerZodValidation.createBannerValidationSchema),
+    BannerController.createBanner,
+  )
+  .get(BannerController.getBannersFromDB);
 
 router.patch(
-    "/status/:id",
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-    BannerController.updateBannerStatus,
+  "/status/:id",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  BannerController.updateBannerStatus,
 );
 
 router
-    .route("/:id")
-    .patch(
-        auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-        fileUploadHandler(),
-        parseAllFilesData(
-            { fieldName: FOLDER_NAMES.IMAGE, forceSingle: true }
-        ),
-        BannerController.updateBanner,
-    )
-    .delete(
-        auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-        BannerController.deleteBanner,
-    );
-
+  .route("/:id")
+  .patch(
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    fileUploadHandler(),
+    parseAllFilesData({ fieldName: FOLDER_NAMES.IMAGE, forceSingle: true }),
+    BannerController.updateBanner,
+  )
+  .delete(
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    BannerController.deleteBanner,
+  );
 
 router.get(
-    "/all",
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-    BannerController.getAllBanner,
+  "/all",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  BannerController.getAllBanner,
 );
 
 export const BannerRoutes = router;

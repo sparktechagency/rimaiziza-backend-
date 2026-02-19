@@ -11,7 +11,7 @@ export type IUser = {
   membershipId?: string;
   phone?: string;
   status: STATUS;
-  
+
   stripeConnectedAccountId?: string;
   isStripeOnboarded?: boolean;
   location?: {

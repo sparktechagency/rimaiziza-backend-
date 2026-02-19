@@ -47,6 +47,4 @@ router.get(
   AnalyticsControllers.getHostMonthlyEarnings,
 );
 
-
-
 export const AnalyticsRoutes = router;

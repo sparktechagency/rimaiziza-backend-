@@ -102,8 +102,6 @@ const deleteAdminFromDB = async (id: any) => {
 
 // --- HOST SERVICES ---
 const createHostToDB = async (payload: any) => {
-
-
   const isExistHost = await User.findOne({ email: payload.email });
   if (isExistHost) {
     throw new ApiError(StatusCodes.CONFLICT, "This Email already taken");
@@ -126,13 +124,13 @@ const createHostToDB = async (payload: any) => {
 
 const ghostLoginAsHost = async (superAdmin: JwtPayload, hostId: string) => {
   if (superAdmin.role !== USER_ROLES.SUPER_ADMIN) {
-    throw new ApiError(403, 'Unauthorized: Only SuperAdmin can use ghost mode');
+    throw new ApiError(403, "Unauthorized: Only SuperAdmin can use ghost mode");
   }
 
   const host = await User.findById(hostId);
 
   if (!host || host.role !== USER_ROLES.HOST) {
-    throw new ApiError(404, 'Host not found');
+    throw new ApiError(404, "Host not found");
   }
 
   // Generate JWT as host
@@ -229,7 +227,7 @@ const getAllHostFromDB = async (query: any) => {
 
   if (!hosts || hosts.length === 0) throw new ApiError(404, "No hosts found");
 
-  const hostIds = hosts.map(h => h._id);
+  const hostIds = hosts.map((h) => h._id);
 
   // Aggregate hosts with vehicles
   const hostsWithVehicles = await User.aggregate([
@@ -257,19 +255,19 @@ const getAllHostFromDB = async (query: any) => {
 
   // -------------------- Trips --------------------
   // Collect all carIds first for bulk trip aggregation
-  const allCarIds = hostsWithVehicles.flatMap(host =>
-    host.vehicles.map((v: any) => v._id)
+  const allCarIds = hostsWithVehicles.flatMap((host) =>
+    host.vehicles.map((v: any) => v._id),
   );
 
   const tripMap = await getCarTripCountMap(allCarIds);
 
   // -------------------- Revenue & Attach trips --------------------
   await Promise.all(
-    hostsWithVehicles.map(async host => {
+    hostsWithVehicles.map(async (host) => {
       const vehicleIds = host.vehicles.map((v: any) => v._id);
 
       // Trips: sum from map
-      host.totalTrips = vehicleIds.reduce((acc:any, carId:any) => {
+      host.totalTrips = vehicleIds.reduce((acc: any, carId: any) => {
         return acc + (tripMap[carId.toString()] || 0);
       }, 0);
 
@@ -312,7 +310,7 @@ const getAllHostFromDB = async (query: any) => {
       }
 
       host.totalRevenue = totalRevenue;
-    })
+    }),
   );
 
   return {
@@ -454,18 +452,23 @@ const deleteHostByIdFromD = async (id: string) => {
 
 const getTotalUsersAndHostsFromDB = async () => {
   const [totalUsers, totalHosts] = await Promise.all([
-    User.countDocuments({ role: USER_ROLES.USER, status: STATUS.ACTIVE, verified: true }),
-    User.countDocuments({ role: USER_ROLES.HOST, status: STATUS.ACTIVE, verified: true }),
+    User.countDocuments({
+      role: USER_ROLES.USER,
+      status: STATUS.ACTIVE,
+      verified: true,
+    }),
+    User.countDocuments({
+      role: USER_ROLES.HOST,
+      status: STATUS.ACTIVE,
+      verified: true,
+    }),
   ]);
 
   return { totalUsers, totalHosts };
 };
 
-
-
 // --- USER SERVICES ---
 const createUserToDB = async (payload: any) => {
-
   const isExistUser = await User.findOne({ email: payload.email });
   if (isExistUser) {
     throw new ApiError(StatusCodes.CONFLICT, "This Email already taken");
@@ -473,7 +476,7 @@ const createUserToDB = async (payload: any) => {
 
   const createUser = await User.create(payload);
   if (!createUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to create user");
   }
 
   //send email
@@ -527,9 +530,7 @@ const createUserToDB = async (payload: any) => {
 //   return isExistUser;
 // };
 
-const getUserProfileFromDB = async (
-  user: JwtPayload,
-): Promise<any> => {
+const getUserProfileFromDB = async (user: JwtPayload): Promise<any> => {
   const { id } = user;
 
   const isExistUser: any = await User.isExistUserById(id);
@@ -550,10 +551,11 @@ const getUserProfileFromDB = async (
       bookingStatus: { $in: [BOOKING_STATUS.COMPLETED] },
     });
 
-
     // Success rate %
     const successRate =
-      totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+      totalBookings > 0
+        ? Math.round((completedBookings / totalBookings) * 100)
+        : 0;
 
     const hostCar = await Car.findOne({ assignedHosts: id }, { _id: 1 });
 
@@ -562,7 +564,10 @@ const getUserProfileFromDB = async (
     const trips = await getCarTripCount(hostCar?._id);
 
     // Review summary
-    const reviewSummary = await ReviewServices.getReviewSummary(id, REVIEW_TARGET_TYPE.HOST);
+    const reviewSummary = await ReviewServices.getReviewSummary(
+      id,
+      REVIEW_TARGET_TYPE.HOST,
+    );
 
     profile.totalBookings = totalBookings;
     // profile.completedBookings = completedBookings;
@@ -609,7 +614,11 @@ const switchProfileToDB = async (
   if (![USER_ROLES.USER, USER_ROLES.HOST].includes(role))
     throw new ApiError(400, "Role is must be either 'USER' or 'HOST'");
 
-  const updatedUser = await User.findByIdAndUpdate(userId, { role }, { new: true });
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { role },
+    { new: true },
+  );
 
   if (!updatedUser) throw new ApiError(400, "Failed to update role");
 
@@ -654,7 +663,7 @@ const getAllUsersFromDB = async (query: any) => {
     throw new ApiError(404, "No users are found in the database");
 
   // Convert users to plain objects for aggregation join
-  const userIds = users.map(u => u._id);
+  const userIds = users.map((u) => u._id);
 
   // Aggregate bookings per user
   const bookingStats = await Booking.aggregate([
@@ -689,8 +698,8 @@ const getAllUsersFromDB = async (query: any) => {
   ]);
 
   // Map booking stats to users
-  const usersWithStats = users.map(user => {
-    const stats = bookingStats.find(b => b._id.equals(user._id));
+  const usersWithStats = users.map((user) => {
+    const stats = bookingStats.find((b) => b._id.equals(user._id));
     return {
       ...user.toObject(),
       bookingCount: stats?.totalBookings || 0,
@@ -761,7 +770,7 @@ const deleteUserByIdFromD = async (id: string) => {
 
 const deleteProfileFromDB = async (id: string, password: string) => {
   // user exists?
-  const user = await User.findById(id).select('+password');
+  const user = await User.findById(id).select("+password");
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
@@ -769,18 +778,17 @@ const deleteProfileFromDB = async (id: string, password: string) => {
   // check password
   const isPasswordMatch = await bcrypt.compare(password, user.password!);
   if (!isPasswordMatch) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Password is incorrect!');
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Password is incorrect!");
   }
 
   // delete user
   const result = await User.findByIdAndDelete(id);
   if (!result) {
-    throw new ApiError(400, 'Failed to delete this user');
+    throw new ApiError(400, "Failed to delete this user");
   }
 
   return result;
 };
-
 
 export const UserService = {
   createUserToDB,

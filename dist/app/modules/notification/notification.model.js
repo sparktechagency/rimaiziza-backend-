@@ -3,31 +3,37 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Notification = void 0;
 const mongoose_1 = require("mongoose");
 const notification_constant_1 = require("./notification.constant");
-const notificationSchema = new mongoose_1.Schema({
+const notificationSchema = new mongoose_1.Schema(
+  {
     text: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     receiver: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+      type: mongoose_1.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     referenceId: {
-        type: String,
-        required: false,
+      type: String,
+      required: false,
     },
     read: {
-        type: Boolean,
-        default: false,
+      type: Boolean,
+      default: false,
     },
     type: {
-        type: String,
-        enum: Object.values(notification_constant_1.NOTIFICATION_TYPE),
-        required: true,
+      type: String,
+      enum: Object.values(notification_constant_1.NOTIFICATION_TYPE),
+      required: true,
     },
-}, {
+  },
+  {
     timestamps: true,
     versionKey: false,
-});
-exports.Notification = (0, mongoose_1.model)("Notification", notificationSchema);
+  },
+);
+exports.Notification = (0, mongoose_1.model)(
+  "Notification",
+  notificationSchema,
+);

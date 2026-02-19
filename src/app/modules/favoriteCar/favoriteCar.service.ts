@@ -36,7 +36,6 @@ const toggleFavorite = async (payload: {
   };
 };
 
-
 const getFavorite = async (userId: string) => {
   const favorites = await FavoriteCar.find({ userId })
     .populate({
@@ -59,41 +58,41 @@ const getFavorite = async (userId: string) => {
   // ---------- STEP 2: Get trip count map ----------
   const tripCountMap = await getCarTripCountMap(carIds);
 
+  // ---------- STEP 3: Attach trips + rating ----------
+  const finalFavorites = await Promise.all(
+    favorites.map(async (fav: any) => {
+      console.log(fav, "fav");
+      const carId = fav.referenceId?._id?.toString();
+      if (!carId) return fav;
 
- // ---------- STEP 3: Attach trips + rating ----------
- const finalFavorites = await Promise.all(
-  favorites.map(async (fav: any) => {
+      const hostId = fav.referenceId?.userId
+        ? fav.referenceId.userId.toString()
+        : null;
 
-    console.log(fav, "fav");
-    const carId = fav.referenceId?._id?.toString();
-    if (!carId) return fav;
+      let reviewSummary: any = null;
 
-    const hostId = fav.referenceId?.userId
-      ? fav.referenceId.userId.toString()
-      : null;
+      if (hostId) {
+        reviewSummary = await ReviewServices.getReviewSummary(
+          hostId,
+          REVIEW_TARGET_TYPE.HOST,
+        );
+      }
 
-    let reviewSummary: any = null;
-
-    if (hostId) {
-      reviewSummary = await ReviewServices.getReviewSummary(
-        hostId,
-        REVIEW_TARGET_TYPE.HOST,
-      );
-    }
-
-    return {
-      ...fav,
-      referenceId: {
-        ...fav.referenceId,
-        trips: tripCountMap[carId] || 0,
-        averageRating: reviewSummary ? reviewSummary.averageRating : undefined,
-        totalReviews: reviewSummary ? reviewSummary.totalReviews : undefined,
-        starCounts: reviewSummary ? reviewSummary.starCounts : undefined,
-        reviews: reviewSummary ? reviewSummary.reviews : undefined,
-      },
-    };
-  })
-);
+      return {
+        ...fav,
+        referenceId: {
+          ...fav.referenceId,
+          trips: tripCountMap[carId] || 0,
+          averageRating: reviewSummary
+            ? reviewSummary.averageRating
+            : undefined,
+          totalReviews: reviewSummary ? reviewSummary.totalReviews : undefined,
+          starCounts: reviewSummary ? reviewSummary.starCounts : undefined,
+          reviews: reviewSummary ? reviewSummary.reviews : undefined,
+        },
+      };
+    }),
+  );
 
   return finalFavorites;
 };
