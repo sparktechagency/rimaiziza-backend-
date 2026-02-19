@@ -399,6 +399,73 @@ const getHostDashboardStats = async (hostId: string) => {
   };
 };
 
+const getHostMonthlyEarnings = async (hostId: string, year?: number) => {
+  if (!hostId || !Types.ObjectId.isValid(hostId)) {
+    throw new ApiError(400, "Invalid hostId");
+  }
+
+  const objectHostId = new Types.ObjectId(hostId);
+  const selectedYear = year || new Date().getFullYear();
+
+  const startDate = new Date(`${selectedYear}-01-01T00:00:00.000Z`);
+  const endDate = new Date(`${selectedYear + 1}-01-01T00:00:00.000Z`);
+
+  const result = await Transaction.aggregate([
+    {
+      $match: {
+        type: TRANSACTION_TYPE.BOOKING,
+        status: TRANSACTION_STATUS.SUCCESS,
+        createdAt: { $gte: startDate, $lt: endDate },
+      },
+    },
+    {
+      $lookup: {
+        from: "bookings",
+        localField: "bookingId",
+        foreignField: "_id",
+        as: "booking",
+      },
+    },
+    { $unwind: "$booking" },
+    {
+      $match: {
+        "booking.hostId": objectHostId,
+        "booking.bookingStatus": BOOKING_STATUS.COMPLETED,
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        total: { $sum: "$charges.hostCommission" },
+      },
+    },
+    {
+      $project: {
+        month: "$_id",
+        total: 1,
+        _id: 0,
+      },
+    },
+  ]);
+
+  // Initialize all 12 months with 0
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const monthlyData = months.map((name, index) => {
+    const found = result.find(r => r.month === index + 1);
+    return {
+      month: name,
+      total: found ? found.total : 0,
+    };
+  });
+
+  return monthlyData;
+};
+
+
 
 export const AnalyticsServices={
     getDashboardStats,
@@ -407,4 +474,5 @@ export const AnalyticsServices={
     getUserStats,
     getBookingSummary,
     getHostDashboardStats,
+    getHostMonthlyEarnings,
 }

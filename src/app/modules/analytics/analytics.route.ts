@@ -41,6 +41,12 @@ router.get(
   AnalyticsControllers.getHostDashboardStats,
 );
 
+router.get(
+  "/host-monthly-earnings",
+  auth(USER_ROLES.HOST),
+  AnalyticsControllers.getHostMonthlyEarnings,
+);
+
 
 
 export const AnalyticsRoutes = router;

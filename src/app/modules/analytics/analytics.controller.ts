@@ -65,6 +65,19 @@ const getHostDashboardStats = catchAsync(async (req, res) => {
   });
 });
 
+const getHostMonthlyEarnings = catchAsync(async (req, res) => {
+  const { id: hostId } = req.user as any;
+  const { year } = req.query;
+  const result = await AnalyticsServices.getHostMonthlyEarnings(hostId, Number(year));
+  
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved host monthly earnings",
+    data: result,
+  });
+});
+
 export const AnalyticsControllers = {
   getDashboardStats,
   getYearlyRevenueChart,
@@ -72,4 +85,5 @@ export const AnalyticsControllers = {
   getUserStats,
   getBookingSummary,
   getHostDashboardStats,
+  getHostMonthlyEarnings,
 }
