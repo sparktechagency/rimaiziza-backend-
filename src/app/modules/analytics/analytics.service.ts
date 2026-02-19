@@ -2,9 +2,12 @@ import { PipelineStage } from "mongoose";
 import { BOOKING_STATUS } from "../booking/booking.interface";
 import { Booking } from "../booking/booking.model";
 import { Car } from "../car/car.model";
-import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
+import { TRANSACTION_STATUS, TRANSACTION_TYPE } from "../transaction/transaction.interface";
 import { User } from "../user/user.model";
 import { STATUS, USER_ROLES } from "../../../enums/user";
+import { Types } from "mongoose";
+import ApiError from "../../../errors/ApiErrors";
+import { Transaction } from "../transaction/transaction.model";
 
 const getDashboardStats = async () => {
   try {
@@ -329,10 +332,79 @@ const getBookingSummary = async () => {
 
 };
 
+
+const getHostDashboardStats = async (hostId: string) => {
+  if (!hostId || !Types.ObjectId.isValid(hostId)) {
+    throw new ApiError(400, "Invalid hostId");
+  }
+
+  const objectHostId = new Types.ObjectId(hostId);
+
+  // ------------------ TOTAL EARNING ------------------
+  const earningResult = await Transaction.aggregate([
+    {
+      $match: {
+        type: TRANSACTION_TYPE.BOOKING,
+        status: TRANSACTION_STATUS.SUCCESS,
+      },
+    },
+    {
+      $lookup: {
+        from: "bookings",
+        localField: "bookingId",
+        foreignField: "_id",
+        as: "booking",
+      },
+    },
+    { $unwind: "$booking" },
+    {
+      $match: {
+        "booking.hostId": objectHostId,
+        "booking.bookingStatus": BOOKING_STATUS.COMPLETED,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalEarning: { $sum: "$charges.hostCommission" },
+      },
+    },
+  ]);
+
+  const totalEarning = earningResult[0]?.totalEarning ?? 0;
+
+  // ------------------ TOTAL TRIPS ------------------
+  const totalTrips = await Booking.countDocuments({
+    hostId: objectHostId,
+    bookingStatus: BOOKING_STATUS.COMPLETED,
+  });
+
+  // ------------------ YOUR VEHICLES ------------------
+  const totalVehicles = await Car.countDocuments({
+    assignedHosts: hostId,
+    isActive: true,
+  });
+
+  // ------------------ PENDING REQUEST ------------------
+  const pendingRequests = await Booking.countDocuments({
+    hostId: objectHostId,
+    bookingStatus: BOOKING_STATUS.PENDING,
+  });
+
+  return {
+    totalEarning,
+    totalTrips,
+    totalVehicles,
+    pendingRequests,
+  };
+};
+
+
 export const AnalyticsServices={
     getDashboardStats,
     getYearlyRevenueChart,
     getYearlyBookingAndUserChart,
     getUserStats,
     getBookingSummary,
+    getHostDashboardStats,
 }

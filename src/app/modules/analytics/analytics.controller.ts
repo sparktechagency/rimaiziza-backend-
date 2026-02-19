@@ -54,7 +54,16 @@ const getBookingSummary = catchAsync(async (req, res) => {
   });
 });
 
-
+const getHostDashboardStats = catchAsync(async (req, res) => {
+  const { id: hostId } = req.user as any;
+  const result = await AnalyticsServices.getHostDashboardStats(hostId);
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Successfully retrieved host dashboard stats",
+    data: result,
+  });
+});
 
 export const AnalyticsControllers = {
   getDashboardStats,
@@ -62,4 +71,5 @@ export const AnalyticsControllers = {
   getYearlyBookingAndUserChart,
   getUserStats,
   getBookingSummary,
+  getHostDashboardStats,
 }

@@ -35,6 +35,12 @@ router.get(
   AnalyticsControllers.getBookingSummary,
 );
 
+router.get(
+  "/host-dashboard-stats",
+  auth(USER_ROLES.HOST),
+  AnalyticsControllers.getHostDashboardStats,
+);
+
 
 
 export const AnalyticsRoutes = router;

@@ -207,7 +207,6 @@ const deleteCarByIdFromDB = async (id: string) => {
 };
 
 // ---APP---
-
 const getAvailability = async (carId: string, dateString: string) => {
     // ---------- Normalize Date (UTC Day) ----------
     const targetDate = new Date(dateString);
@@ -381,7 +380,6 @@ const getBookingBlockedHours = (bookings: any[], date: Date) => {
  * HELPER: FULL DAY BLOCK
  * =========================
 */
-
 const generateBlockedResponse = (date: Date, reason: string) => ({
     date: date.toISOString().split("T")[0],
     isFullyBlocked: true,
