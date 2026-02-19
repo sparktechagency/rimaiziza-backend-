@@ -8,7 +8,9 @@ const createReview = async (payload: IReview, reviewerId: string) => {
   const { reviewForId, ratingValue, feedback, reviewType } = payload;
 
   if (!reviewForId) throw new ApiError(400, "reviewForId is required");
+
   if (!reviewType) throw new ApiError(400, "reviewType is required");
+
   if (![REVIEW_TARGET_TYPE.HOST, REVIEW_TARGET_TYPE.USER].includes(reviewType))
     throw new ApiError(400, "Invalid reviewType");
 
@@ -23,6 +25,7 @@ const createReview = async (payload: IReview, reviewerId: string) => {
     reviewForId,
     reviewById: reviewerId,
   });
+
   if (already) throw new ApiError(400, "You have already reviewed this user/host");
 
   const review = await Review.create({
@@ -57,26 +60,30 @@ const getReviewSummary = async (reviewForId: string, reviewType: REVIEW_TARGET_T
   const reviews = await Review.find({ reviewForId: objectId, reviewType })
     .populate({
       path: "reviewById",
-      select: "name role email phone profileImage location _id",
     })
     .sort({ createdAt: -1 })
     .lean();
+
+    console.log(reviews,"reviews")
 
   const reviewList = reviews.map((r: any) => ({
     reviewId: r._id,
     ratingValue: r.ratingValue,
     feedback: r.feedback,
     createdAt: r.createdAt,
-    fromUser: {
-      _id: r.reviewById._id,
-      name: r.reviewById.name,
-      role: r.reviewById.role,
-      email: r.reviewById.email,
-      phone: r.reviewById.phone,
-      profileImage: r.reviewById.profileImage,
-      location: r.reviewById.location,
-    },
+    fromUser: r.reviewById
+      ? {
+          _id: r.reviewById._id,
+          name: r.reviewById.name,
+          role: r.reviewById.role,
+          email: r.reviewById.email,
+          phone: r.reviewById.phone,
+          profileImage: r.reviewById.profileImage,
+          location: r.reviewById.location,
+        }
+      : null,
   }));
+
 
   return {
     averageRating: Number(averageRating.toFixed(1)),

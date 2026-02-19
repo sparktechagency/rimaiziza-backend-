@@ -40,7 +40,19 @@ const createExtendBookingPaymentController = (0, catchAsync_1.default)((req, res
         data: sessionUrl,
     });
 }));
+const getTransactionsController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id: userId } = req.user;
+    const { status } = req.query;
+    const transactions = yield transaction_service_1.TransactionServices.getTransactionsFromDB(userId, status);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: 200,
+        message: "Transactions fetched successfully",
+        data: transactions,
+    });
+}));
 exports.TransactionControllers = {
     createBookingPaymentSession,
     createExtendBookingPaymentController,
+    getTransactionsController,
 };

@@ -797,7 +797,7 @@ const getCarByIdForUserFromDB = async (id: string, userId: string) => {
     let reviewSummary: IReviewSummary = {
         averageRating: 0,
         totalReviews: 0,
-        starCounts: {},
+        starCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         reviews: [],
     };
 

@@ -242,12 +242,14 @@ const deleteUserById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 const deleteProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id: userId } = req.user;
-    const result = yield user_service_1.UserService.deleteProfileFromDB(userId);
+    const { id } = req.user;
+    // console.log(id, "ID");
+    const { password } = req.body;
+    const result = yield user_service_1.UserService.deleteProfileFromDB(id, password);
     (0, sendResponse_1.default)(res, {
         success: true,
-        statusCode: 200,
-        message: "Successfully delete your account",
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Profile deleted successfully',
         data: result,
     });
 }));

@@ -35,7 +35,7 @@ export interface IReviewItem {
   ratingValue: number;
   feedback?: string;
   createdAt: Date;
-  fromUser: IReviewFromUser;
+  fromUser: IReviewFromUser | null;
 }
 
 export interface IReviewSummary {

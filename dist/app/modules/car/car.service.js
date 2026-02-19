@@ -577,7 +577,7 @@ const getNearbyCarsFromDB = (params) => __awaiter(void 0, void 0, void 0, functi
     };
 });
 const getCarByIdForUserFromDB = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const car = yield car_model_1.Car.findById(id);
+    const car = yield car_model_1.Car.findById(id).populate("assignedHosts");
     if (!car) {
         return null;
     }
@@ -594,14 +594,23 @@ const getCarByIdForUserFromDB = (id, userId) => __awaiter(void 0, void 0, void 0
     let reviewSummary = {
         averageRating: 0,
         totalReviews: 0,
-        starCounts: {},
+        starCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         reviews: [],
     };
+    let totalBookings = 0;
+    let successRate = 0;
     if (car.assignedHosts) {
-        reviewSummary = yield review_service_1.ReviewServices.getReviewSummary(car.assignedHosts.toString(), review_interface_1.REVIEW_TARGET_TYPE.HOST);
+        reviewSummary = yield review_service_1.ReviewServices.getReviewSummary(car.assignedHosts._id.toString(), review_interface_1.REVIEW_TARGET_TYPE.HOST);
+        totalBookings = yield booking_model_1.Booking.countDocuments({ hostId: car.assignedHosts._id });
+        const completedBookings = yield booking_model_1.Booking.countDocuments({
+            hostId: car.assignedHosts._id,
+            bookingStatus: { $in: [booking_interface_1.BOOKING_STATUS.COMPLETED] },
+        });
+        successRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
     }
     return Object.assign(Object.assign({}, car.toObject()), { trips: trips || 0, isAvailable,
-        availabilityCalendar, isFavorite: Boolean(isBookmarked), averageRating: reviewSummary.averageRating, totalReviews: reviewSummary.totalReviews, starCounts: reviewSummary.starCounts, reviews: reviewSummary.reviews });
+        availabilityCalendar, isFavorite: Boolean(isBookmarked), averageRating: reviewSummary.averageRating, totalReviews: reviewSummary.totalReviews, starCounts: reviewSummary.starCounts, reviews: reviewSummary.reviews, totalBookings,
+        successRate });
 });
 const getCarsByHostFromDB = (hostId) => __awaiter(void 0, void 0, void 0, function* () {
     if (!hostId || !mongoose_1.Types.ObjectId.isValid(hostId)) {

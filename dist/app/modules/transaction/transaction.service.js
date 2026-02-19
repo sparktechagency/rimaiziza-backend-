@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionServices = void 0;
+const mongoose_1 = require("mongoose");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const ApiErrors_1 = __importDefault(require("../../../errors/ApiErrors"));
 const booking_interface_1 = require("../booking/booking.interface");
@@ -22,6 +23,8 @@ const car_utils_1 = require("../car/car.utils");
 const charges_service_1 = require("../charges/charges.service");
 const transaction_interface_1 = require("./transaction.interface");
 const transaction_model_1 = require("./transaction.model");
+const user_model_1 = require("../user/user.model");
+const user_1 = require("../../../enums/user");
 // const createBookingPaymentSession = async (bookingId: string, userId: string) => {
 //     const booking = await Booking.findById(bookingId).populate('carId');
 //     if (!booking) throw new Error("Booking not found");
@@ -94,7 +97,7 @@ const createBookingPaymentSession = (bookingId, userId) => __awaiter(void 0, voi
     const car = booking.carId;
     if (!car)
         throw new Error("Car details not found");
-    const totalAmountWithDeposit = booking.totalAmount + (car.depositAmount || 0);
+    const totalAmount = booking.totalAmount;
     //  Dynamic charges calculation
     const charges = yield (0, charges_service_1.getDynamicCharges)({
         totalAmount: booking.totalAmount,
@@ -103,7 +106,8 @@ const createBookingPaymentSession = (bookingId, userId) => __awaiter(void 0, voi
     const transaction = yield transaction_model_1.Transaction.create({
         bookingId: booking._id,
         userId,
-        amount: totalAmountWithDeposit,
+        hostId: booking.hostId,
+        amount: totalAmount,
         type: transaction_interface_1.TRANSACTION_TYPE.BOOKING,
         status: transaction_interface_1.TRANSACTION_STATUS.INITIATED,
         charges: {
@@ -123,7 +127,7 @@ const createBookingPaymentSession = (bookingId, userId) => __awaiter(void 0, voi
                     product_data: {
                         name: `Booking ${booking._id}`,
                     },
-                    unit_amount: Math.round(totalAmountWithDeposit * 100),
+                    unit_amount: Math.round(totalAmount * 100),
                 },
                 quantity: 1,
             },
@@ -165,6 +169,7 @@ const createExtendBookingPaymentSession = (bookingId, userId, newToDate) => __aw
     const transaction = yield transaction_model_1.Transaction.create({
         bookingId: booking._id,
         userId,
+        hostId: booking.hostId,
         amount: extendedAmount,
         type: transaction_interface_1.TRANSACTION_TYPE.EXTEND,
         status: transaction_interface_1.TRANSACTION_STATUS.INITIATED,
@@ -196,7 +201,45 @@ const createExtendBookingPaymentSession = (bookingId, userId, newToDate) => __aw
     console.log(session, "SESSIOn");
     return session.url;
 });
+const getTransactionsFromDB = (userId, status) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!mongoose_1.Types.ObjectId.isValid(userId)) {
+        throw new Error("Invalid user ID");
+    }
+    // Step 1: Fetch user to get role
+    const user = yield user_model_1.User.findById(userId).select("role");
+    if (!user)
+        throw new Error("User not found");
+    // Step 2: Get bookings depending on role
+    const bookingFilter = user.role === user_1.USER_ROLES.USER
+        ? { userId: new mongoose_1.Types.ObjectId(userId) }
+        : { hostId: new mongoose_1.Types.ObjectId(userId) };
+    const bookings = yield booking_model_1.Booking.find(bookingFilter).select("_id");
+    if (!bookings.length)
+        return [];
+    const bookingIds = bookings.map(b => b._id);
+    // Step 3: Build transaction filter
+    const transactionFilter = { bookingId: { $in: bookingIds } };
+    if (status) {
+        // If status is provided in query, use it
+        transactionFilter.status = status;
+    }
+    else {
+        // If no status provided, default to SUCCESS and REFUNDED
+        transactionFilter.status = { $in: [transaction_interface_1.TRANSACTION_STATUS.SUCCESS, transaction_interface_1.TRANSACTION_STATUS.REFUNDED] };
+    }
+    // Step 4: Fetch transactions
+    const transactions = yield transaction_model_1.Transaction.find(transactionFilter)
+        .populate({
+        path: "userId",
+    })
+        .populate({
+        path: "hostId",
+    })
+        .lean();
+    return transactions;
+});
 exports.TransactionServices = {
     createBookingPaymentSession,
     createExtendBookingPaymentSession,
+    getTransactionsFromDB,
 };

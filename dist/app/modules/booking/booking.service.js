@@ -25,6 +25,7 @@ const transaction_model_1 = require("../transaction/transaction.model");
 const booking_interface_1 = require("./booking.interface");
 const booking_model_1 = require("./booking.model");
 const booking_utils_1 = require("./booking.utils");
+const charges_service_1 = require("../charges/charges.service");
 const createBookingToDB = (payload, userId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     yield (0, car_utils_1.validateAvailabilityStrict)(payload.carId, payload.fromDate, payload.toDate);
@@ -161,6 +162,7 @@ const cancelBookingFromDB = (bookingId, actorId, actorRole) => __awaiter(void 0,
     const isUserActor = actorRole === user_1.USER_ROLES.USER;
     const isHostActor = actorRole === user_1.USER_ROLES.HOST;
     const isAdminActor = actorRole === user_1.USER_ROLES.ADMIN || actorRole === user_1.USER_ROLES.SUPER_ADMIN;
+    // Role-based permission check
     if (isUserActor) {
         if (!booking.userId.equals(actorId)) {
             throw new ApiErrors_1.default(403, "You are not allowed to cancel this booking");
@@ -181,34 +183,34 @@ const cancelBookingFromDB = (bookingId, actorId, actorRole) => __awaiter(void 0,
     const transaction = booking.transactionId
         ? yield transaction_model_1.Transaction.findById(booking.transactionId)
         : null;
-    if (transaction &&
-        transaction.status === transaction_interface_1.TRANSACTION_STATUS.SUCCESS &&
-        transaction.stripePaymentIntentId) {
+    if (transaction && transaction.status === transaction_interface_1.TRANSACTION_STATUS.SUCCESS && transaction.stripePaymentIntentId) {
         const car = booking.carId;
-        if (!car) {
+        if (!car)
             throw new ApiErrors_1.default(400, "Car details not found");
-        }
         const fromDate = new Date(booking.fromDate);
-        const cancellationTime = now;
+        const toDate = new Date(booking.toDate);
+        const totalDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
         const paidAmount = transaction.amount;
         const dailyPrice = car.dailyPrice;
-        const deliveryFee = booking.deliveryFee || 0;
-        const collectionFee = booking.collectionFee || 0;
-        const diffMs = fromDate.getTime() - cancellationTime.getTime();
+        // Get dynamic charges
+        const { platformFee, hostCommission, adminCommission } = yield (0, charges_service_1.getDynamicCharges)({ totalAmount: paidAmount });
+        const diffMs = fromDate.getTime() - now.getTime();
         const diffHours = diffMs / (1000 * 60 * 60);
         let chargeAmount = 0;
-        if (cancellationTime >= fromDate) {
-            chargeAmount = dailyPrice + deliveryFee + collectionFee;
+        // Cancellation after pickup
+        if (now >= fromDate) {
+            // Multi-day prorated charge
+            const daysUsed = Math.min(Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)), totalDays);
+            chargeAmount = daysUsed * dailyPrice + platformFee + hostCommission + adminCommission;
         }
+        // Cancellation < 72 hours before pickup
         else if (diffHours < 72) {
             chargeAmount = dailyPrice;
         }
-        if (chargeAmount < 0) {
+        if (chargeAmount < 0)
             chargeAmount = 0;
-        }
-        if (chargeAmount > paidAmount) {
+        if (chargeAmount > paidAmount)
             chargeAmount = paidAmount;
-        }
         const refundAmount = paidAmount - chargeAmount;
         if (refundAmount > 0) {
             yield stripe_1.default.refunds.create({
@@ -219,14 +221,16 @@ const cancelBookingFromDB = (bookingId, actorId, actorRole) => __awaiter(void 0,
             yield transaction.save();
         }
     }
-    if (isUserActor) {
+    if (isUserActor)
         booking.isCanceledByUser = true;
-    }
-    if (isHostActor) {
+    if (isHostActor)
         booking.isCanceledByHost = true;
-    }
     booking.bookingStatus = booking_interface_1.BOOKING_STATUS.CANCELLED;
     yield booking.save();
+    // Update vehicle availability
+    if (booking.carId) {
+        yield car_model_1.Car.findByIdAndUpdate(booking.carId._id, { isAvailable: true });
+    }
     return booking;
 });
 // const confirmBookingAfterPaymentFromDB = async (

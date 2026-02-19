@@ -15,6 +15,11 @@ const transactionSchema = new mongoose_2.Schema({
         ref: "User",
         required: true
     },
+    hostId: {
+        type: mongoose_1.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     stripeSessionId: String,
     stripePaymentIntentId: String,
     amount: {

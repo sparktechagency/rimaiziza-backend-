@@ -282,16 +282,18 @@ const deleteUserById = catchAsync(async (req, res) => {
 });
 
 const deleteProfile = catchAsync(async (req, res) => {
-  const { id: userId } = req.user;
+     const { id }: any = req.user;
+     // console.log(id, "ID");
+     const { password } = req.body;
 
-  const result = await UserService.deleteProfileFromDB(userId);
+     const result = await UserService.deleteProfileFromDB(id, password);
 
-  sendResponse(res, {
-    success: true,
-    statusCode: 200,
-    message: "Successfully delete your account",
-    data: result,
-  });
+     sendResponse(res, {
+          success: true,
+          statusCode: StatusCodes.OK,
+          message: 'Profile deleted successfully',
+          data: result,
+     });
 });
 
 

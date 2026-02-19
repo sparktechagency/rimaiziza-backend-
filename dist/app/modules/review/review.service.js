@@ -63,7 +63,6 @@ const getReviewSummary = (reviewForId, reviewType) => __awaiter(void 0, void 0, 
     const reviews = yield review_model_1.Review.find({ reviewForId: objectId, reviewType })
         .populate({
         path: "reviewById",
-        select: "name role email phone profileImage location _id",
     })
         .sort({ createdAt: -1 })
         .lean();
@@ -72,15 +71,17 @@ const getReviewSummary = (reviewForId, reviewType) => __awaiter(void 0, void 0, 
         ratingValue: r.ratingValue,
         feedback: r.feedback,
         createdAt: r.createdAt,
-        fromUser: {
-            _id: r.reviewById._id,
-            name: r.reviewById.name,
-            role: r.reviewById.role,
-            email: r.reviewById.email,
-            phone: r.reviewById.phone,
-            profileImage: r.reviewById.profileImage,
-            location: r.reviewById.location,
-        },
+        fromUser: r.reviewById
+            ? {
+                _id: r.reviewById._id,
+                name: r.reviewById.name,
+                role: r.reviewById.role,
+                email: r.reviewById.email,
+                phone: r.reviewById.phone,
+                profileImage: r.reviewById.profileImage,
+                location: r.reviewById.location,
+            }
+            : null,
     }));
     return {
         averageRating: Number(averageRating.toFixed(1)),

@@ -1,6 +1,7 @@
 1. payment korar age contact information dekhte parbe na, payment korar por contact information visible hobe - aita frontend theke handle hobe 
-4. trips ar part baki ase
 5. validation korte hobe jeno 24 hours ar niche booking kora na jai min 24 hours book korte hobe
+1. self booking ar service get baki ase
+2. dashboard a koekta get api baki ase, shaigula sesh korte hobe
 =====================================================================================================================
 1. booking create abong refund complete kora hoise
 2. deposite amount 3 days pore refund daouar part complete kora hoise

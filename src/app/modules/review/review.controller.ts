@@ -5,7 +5,7 @@ import { REVIEW_TARGET_TYPE } from "./review.interface";
 
 // POST /reviews
 const createReview = catchAsync(async (req, res) => {
-  const reviewById = req.user._id; // logged-in user/host
+  const {id: reviewById} = req.user as any; // logged-in user/host
   const payload = req.body;
 
   // Validate required fields

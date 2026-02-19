@@ -20,6 +20,7 @@ import { ReviewServices } from "../review/review.service";
 import { REVIEW_TARGET_TYPE } from "../review/review.interface";
 import { Car } from "../car/car.model";
 import { getCarTripCount } from "../car/car.utils";
+import bcrypt from "bcrypt";
 
 // --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
@@ -599,20 +600,27 @@ const deleteUserByIdFromD = async (id: string) => {
   return result;
 };
 
-const deleteProfileFromDB = async (id: string) => {
-  const isExistUser = await User.isExistUserById(id);
-  if (!isExistUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
-  }
+const deleteProfileFromDB = async (id: string, password: string) => {
+     // user exists?
+     const user = await User.findById(id).select('+password');
+     if (!user) {
+          throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+     }
 
-  const result = await User.findByIdAndDelete(id);
+     // check password
+     const isPasswordMatch = await bcrypt.compare(password, user.password!);
+     if (!isPasswordMatch) {
+          throw new ApiError(StatusCodes.UNAUTHORIZED, 'Password is incorrect!');
+     }
 
-  if (!result) {
-    throw new ApiError(400, "Failed to delete this user");
-  }
-  return result;
+     // delete user
+     const result = await User.findByIdAndDelete(id);
+     if (!result) {
+          throw new ApiError(400, 'Failed to delete this user');
+     }
+
+     return result;
 };
-
 
 
 export const UserService = {

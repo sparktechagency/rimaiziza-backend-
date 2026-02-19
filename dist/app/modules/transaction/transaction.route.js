@@ -11,4 +11,5 @@ const user_1 = require("../../../enums/user");
 const router = express_1.default.Router();
 router.post("/create-payment-session/:bookingId", (0, auth_1.default)(user_1.USER_ROLES.USER), transaction_controller_1.TransactionControllers.createBookingPaymentSession);
 router.post("/create-extend-payment-session/:bookingId", (0, auth_1.default)(user_1.USER_ROLES.USER), transaction_controller_1.TransactionControllers.createExtendBookingPaymentController);
+router.get("/", (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.HOST), transaction_controller_1.TransactionControllers.getTransactionsController);
 exports.TransactionRoutes = router;

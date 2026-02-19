@@ -56,14 +56,6 @@ const bookingSchema = new mongoose_1.Schema({
         type: Date,
         required: false
     },
-    deliveryFee: {
-        type: Number,
-        required: false
-    },
-    collectionFee: {
-        type: Number,
-        required: false
-    },
     isCanceledByUser: {
         type: Boolean,
         default: false

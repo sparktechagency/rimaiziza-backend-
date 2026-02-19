@@ -29,6 +29,11 @@ const mongoose_1 = require("mongoose");
 const booking_model_1 = require("../booking/booking.model");
 const booking_interface_1 = require("../booking/booking.interface");
 const transaction_interface_1 = require("../transaction/transaction.interface");
+const review_service_1 = require("../review/review.service");
+const review_interface_1 = require("../review/review.interface");
+const car_model_1 = require("../car/car.model");
+const car_utils_1 = require("../car/car.utils");
+const bcrypt_1 = __importDefault(require("bcrypt"));
 // --- ADMIN SERVICES ---
 const createAdminToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     delete payload.phone;
@@ -274,13 +279,50 @@ const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* 
     };
     return result;
 });
+// const getUserProfileFromDB = async (
+//   user: JwtPayload,
+// ): Promise<Partial<IUser>> => {
+//   const { id } = user;
+//   const isExistUser: any = await User.isExistUserById(id);
+//   if (!isExistUser) {
+//     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+//   }
+//   return isExistUser;
+// };
 const getUserProfileFromDB = (user) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = user;
     const isExistUser = yield user_model_1.User.isExistUserById(id);
     if (!isExistUser) {
         throw new ApiErrors_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
     }
-    return isExistUser;
+    const profile = Object.assign({}, isExistUser.toObject());
+    // যদি host হয়, extra stats
+    if (profile.role === user_1.USER_ROLES.HOST) {
+        // Total bookings
+        const totalBookings = yield booking_model_1.Booking.countDocuments({ hostId: id });
+        // Confirmed/Completed bookings
+        const completedBookings = yield booking_model_1.Booking.countDocuments({
+            hostId: id,
+            bookingStatus: { $in: [booking_interface_1.BOOKING_STATUS.COMPLETED] },
+        });
+        // Success rate %
+        const successRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+        const hostCar = yield car_model_1.Car.findOne({ assignedHosts: id }, { _id: 1 });
+        if (!hostCar)
+            throw new ApiErrors_1.default(404, "Host does not have any car");
+        const trips = yield (0, car_utils_1.getCarTripCount)(hostCar === null || hostCar === void 0 ? void 0 : hostCar._id);
+        // Review summary
+        const reviewSummary = yield review_service_1.ReviewServices.getReviewSummary(id, review_interface_1.REVIEW_TARGET_TYPE.HOST);
+        profile.totalBookings = totalBookings;
+        // profile.completedBookings = completedBookings;
+        profile.successRate = successRate;
+        profile.averageRating = reviewSummary.averageRating;
+        // profile.totalReviews = reviewSummary.totalReviews;
+        // profile.starCounts = reviewSummary.starCounts;
+        // profile.reviews = reviewSummary.reviews;
+        profile.trips = trips;
+    }
+    return profile;
 });
 const updateProfileToDB = (user, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = user;
@@ -418,14 +460,21 @@ const deleteUserByIdFromD = (id) => __awaiter(void 0, void 0, void 0, function* 
     }
     return result;
 });
-const deleteProfileFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    const isExistUser = yield user_model_1.User.isExistUserById(id);
-    if (!isExistUser) {
+const deleteProfileFromDB = (id, password) => __awaiter(void 0, void 0, void 0, function* () {
+    // user exists?
+    const user = yield user_model_1.User.findById(id).select('+password');
+    if (!user) {
         throw new ApiErrors_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
     }
+    // check password
+    const isPasswordMatch = yield bcrypt_1.default.compare(password, user.password);
+    if (!isPasswordMatch) {
+        throw new ApiErrors_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Password is incorrect!');
+    }
+    // delete user
     const result = yield user_model_1.User.findByIdAndDelete(id);
     if (!result) {
-        throw new ApiErrors_1.default(400, "Failed to delete this user");
+        throw new ApiErrors_1.default(400, 'Failed to delete this user');
     }
     return result;
 });
