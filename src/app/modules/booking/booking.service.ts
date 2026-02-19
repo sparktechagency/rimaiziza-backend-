@@ -445,7 +445,28 @@ const getAllBookingsFromDB = async (query: any) => {
   };
 };
 
+ const getSelfBookingsByHost = async (
+  hostId: string,
+  status?: BOOKING_STATUS
+) => {
+  if (!hostId || !Types.ObjectId.isValid(hostId)) {
+    throw new ApiError(400, "Invalid hostId");
+  }
 
+  const filter: any = {
+    hostId: new Types.ObjectId(hostId),
+    isSelfBooking: true,
+  };
+
+  if (status) filter.bookingStatus = status;
+
+  const bookings = await Booking.find(filter)
+    .populate("carId")
+    .sort({ fromDate: -1 }) // latest first
+    .lean();
+
+  return bookings;
+};
 
 
 export const BookingServices = {
@@ -456,4 +477,5 @@ export const BookingServices = {
   cancelBookingFromDB,
   // confirmBookingAfterPaymentFromDB,
   getAllBookingsFromDB,
+  getSelfBookingsByHost,
 }

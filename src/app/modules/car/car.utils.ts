@@ -110,7 +110,7 @@ export const getCarTripCount = async (
 ): Promise<number> => {
   const count = await Booking.countDocuments({
     carId: new Types.ObjectId(carId),
-    bookingStatus: BOOKING_STATUS.CONFIRMED,
+    bookingStatus: BOOKING_STATUS.COMPLETED,
     isCanceledByHost: { $ne: true },
     isCanceledByUser: { $ne: true },
   });
@@ -126,7 +126,7 @@ export const getCarTripCountMap = async (
     {
       $match: {
         carId: { $in: carIds },
-        bookingStatus: BOOKING_STATUS.CONFIRMED,
+        bookingStatus: BOOKING_STATUS.COMPLETED,
         isCanceledByHost: { $ne: true },
         isCanceledByUser: { $ne: true },
       },

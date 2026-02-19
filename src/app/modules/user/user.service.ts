@@ -19,7 +19,7 @@ import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
 import { ReviewServices } from "../review/review.service";
 import { REVIEW_TARGET_TYPE } from "../review/review.interface";
 import { Car } from "../car/car.model";
-import { getCarTripCount } from "../car/car.utils";
+import { getCarTripCount, getCarTripCountMap } from "../car/car.utils";
 import bcrypt from "bcrypt";
 
 // --- ADMIN SERVICES ---
@@ -157,8 +157,60 @@ const ghostLoginAsHost = async (superAdmin: JwtPayload, hostId: string) => {
   };
 };
 
+// const getAllHostFromDB = async (query: any) => {
+//   //  Fetch hosts using QueryBuilder
+//   const baseQuery = User.find({
+//     role: USER_ROLES.HOST,
+//     status: STATUS.ACTIVE,
+//     verified: true,
+//   });
+
+//   const queryBuilder = new QueryBuilder(baseQuery, query)
+//     .search(["name", "email", "membershipId"])
+//     .sort()
+//     .fields()
+//     .filter()
+//     .paginate();
+
+//   const hosts = await queryBuilder.modelQuery;
+//   const meta = await queryBuilder.countTotal();
+
+//   if (!hosts || hosts.length === 0) throw new ApiError(404, "No hosts found");
+
+//   const hostIds = hosts.map(h => h._id);
+
+//   // Aggregate hosts with full vehicle data and count
+//   const hostsWithVehicles = await User.aggregate([
+//     { $match: { _id: { $in: hostIds } } },
+//     {
+//       $lookup: {
+//         from: "cars",
+//         let: { hostId: "$_id" },
+//         pipeline: [
+//           {
+//             $match: {
+//               $expr: { $eq: ["$assignedHost", "$$hostId"] },
+//             },
+//           },
+//         ],
+//         as: "vehicles",
+//       },
+//     },
+//     {
+//       $addFields: {
+//         vehicleCount: { $size: "$vehicles" },
+//       },
+//     },
+//   ]);
+
+//   return {
+//     data: hostsWithVehicles,
+//     meta,
+//   };
+// };
+
 const getAllHostFromDB = async (query: any) => {
-  //  Fetch hosts using QueryBuilder
+  // Fetch hosts using QueryBuilder
   const baseQuery = User.find({
     role: USER_ROLES.HOST,
     status: STATUS.ACTIVE,
@@ -179,7 +231,7 @@ const getAllHostFromDB = async (query: any) => {
 
   const hostIds = hosts.map(h => h._id);
 
-  // Aggregate hosts with full vehicle data and count
+  // Aggregate hosts with vehicles
   const hostsWithVehicles = await User.aggregate([
     { $match: { _id: { $in: hostIds } } },
     {
@@ -203,6 +255,66 @@ const getAllHostFromDB = async (query: any) => {
     },
   ]);
 
+  // -------------------- Trips --------------------
+  // Collect all carIds first for bulk trip aggregation
+  const allCarIds = hostsWithVehicles.flatMap(host =>
+    host.vehicles.map((v: any) => v._id)
+  );
+
+  const tripMap = await getCarTripCountMap(allCarIds);
+
+  // -------------------- Revenue & Attach trips --------------------
+  await Promise.all(
+    hostsWithVehicles.map(async host => {
+      const vehicleIds = host.vehicles.map((v: any) => v._id);
+
+      // Trips: sum from map
+      host.totalTrips = vehicleIds.reduce((acc:any, carId:any) => {
+        return acc + (tripMap[carId.toString()] || 0);
+      }, 0);
+
+      // Revenue
+      let totalRevenue = 0;
+      if (vehicleIds.length) {
+        const revenueBookings = await Booking.aggregate([
+          {
+            $match: {
+              carId: { $in: vehicleIds },
+              bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+              transactionId: { $exists: true, $ne: null },
+              isCanceledByHost: { $ne: true },
+              isCanceledByUser: { $ne: true },
+            },
+          },
+          {
+            $lookup: {
+              from: "transactions",
+              localField: "transactionId",
+              foreignField: "_id",
+              as: "transaction",
+            },
+          },
+          { $unwind: "$transaction" },
+          {
+            $match: {
+              "transaction.status": "SUCCESS",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              revenue: { $sum: "$transaction.charges.hostCommission" },
+            },
+          },
+        ]);
+
+        totalRevenue = revenueBookings[0]?.revenue ?? 0;
+      }
+
+      host.totalRevenue = totalRevenue;
+    })
+  );
+
   return {
     data: hostsWithVehicles,
     meta,
@@ -219,19 +331,15 @@ const getHostByIdFromDB = async (id: string) => {
     },
     {
       $lookup: {
-        from: "cars", // Car collection name
+        from: "cars",
         let: { hostId: "$_id" },
         pipeline: [
           {
             $match: {
-              $expr: { $in: ["$$hostId", "$assignedHosts"] },
+              $expr: { $eq: ["$$hostId", "$assignedHosts"] }, // single host
             },
           },
-          {
-            $project: {
-              assignedHosts: 0, // optional cleanup
-            },
-          },
+          { $project: { assignedHosts: 0 } },
         ],
         as: "vehicles",
       },
@@ -246,9 +354,60 @@ const getHostByIdFromDB = async (id: string) => {
   if (!result.length)
     throw new ApiError(404, "No host is found in the database by this ID");
 
-  return result[0];
-};
+  const host = result[0];
 
+  // -------------------- Trips --------------------
+  let totalTrips = 0;
+  const vehicleIds = host.vehicles.map((v: any) => v._id);
+  for (const carId of vehicleIds) {
+    totalTrips += await getCarTripCount(carId);
+  }
+
+  // -------------------- Revenue --------------------
+  // -------------------- Revenue (safe calculation) --------------------
+  let totalRevenue = 0;
+
+  if (vehicleIds.length) {
+    const revenueBookings = await Booking.aggregate([
+      {
+        $match: {
+          carId: { $in: vehicleIds },
+          bookingStatus: { $ne: BOOKING_STATUS.CANCELLED },
+          transactionId: { $exists: true, $ne: null },
+          isCanceledByHost: { $ne: true },
+          isCanceledByUser: { $ne: true },
+        },
+      },
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "transactionId",
+          foreignField: "_id",
+          as: "transaction",
+        },
+      },
+      { $unwind: "$transaction" },
+      {
+        $match: {
+          "transaction.status": TRANSACTION_STATUS.SUCCESS,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          revenue: { $sum: "$transaction.charges.hostCommission" },
+        },
+      },
+    ]);
+
+    totalRevenue = revenueBookings[0]?.revenue ?? 0;
+  }
+  // Attach trips and revenue
+  host.totalTrips = totalTrips;
+  host.totalRevenue = totalRevenue;
+
+  return host;
+};
 
 const updateHostStatusByIdToDB = async (
   id: string,
@@ -601,25 +760,25 @@ const deleteUserByIdFromD = async (id: string) => {
 };
 
 const deleteProfileFromDB = async (id: string, password: string) => {
-     // user exists?
-     const user = await User.findById(id).select('+password');
-     if (!user) {
-          throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
-     }
+  // user exists?
+  const user = await User.findById(id).select('+password');
+  if (!user) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+  }
 
-     // check password
-     const isPasswordMatch = await bcrypt.compare(password, user.password!);
-     if (!isPasswordMatch) {
-          throw new ApiError(StatusCodes.UNAUTHORIZED, 'Password is incorrect!');
-     }
+  // check password
+  const isPasswordMatch = await bcrypt.compare(password, user.password!);
+  if (!isPasswordMatch) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Password is incorrect!');
+  }
 
-     // delete user
-     const result = await User.findByIdAndDelete(id);
-     if (!result) {
-          throw new ApiError(400, 'Failed to delete this user');
-     }
+  // delete user
+  const result = await User.findByIdAndDelete(id);
+  if (!result) {
+    throw new ApiError(400, 'Failed to delete this user');
+  }
 
-     return result;
+  return result;
 };
 
 

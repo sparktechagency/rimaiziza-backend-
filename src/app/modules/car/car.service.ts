@@ -837,52 +837,6 @@ const getCarByIdForUserFromDB = async (id: string, userId: string) => {
     };
 };
 
-// const getCarsByHostFromDB = async (hostId: string) => {
-//     if (!hostId || !Types.ObjectId.isValid(hostId)) {
-//         throw new ApiError(400, "Invalid hostId");
-//     }
-
-//     const cars = await Car.find({
-//         assignedHosts: hostId,
-//         isActive: true,
-//     }).lean();
-
-//     // -------------------- FAVORITES --------------------
-//     await Promise.all(
-//         cars.map(async (car) => {
-//             const isBookmarked = await FavoriteCar.exists({
-//                 userId: new Types.ObjectId(hostId),
-//                 referenceId: car._id,
-//             });
-//             car.isFavorite = !!isBookmarked;
-//         })
-//     );
-
-//     // -------------------- TRIPS --------------------
-//     const tripCountMap = await getCarTripCountMap(cars.map((c) => c._id));
-//     cars.forEach((car) => {
-//         (car as any).trips = tripCountMap[car._id.toString()] ?? 0;
-//     });
-
-
-//     // -------------------- REVIEWS --------------------
-//     const reviewSummary = await ReviewServices.getReviewSummary(
-//         hostId,
-//         REVIEW_TARGET_TYPE.HOST
-//     );
-
-//     cars.forEach((car) => {
-//         // Virtual / temporary fields
-//         (car as any).averageRating = reviewSummary?.averageRating ?? 0;
-//         (car as any).totalReviews = reviewSummary?.totalReviews ?? 0;
-//         (car as any).starCounts = reviewSummary?.starCounts ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-//         (car as any).reviews = reviewSummary?.reviews ?? [];
-//     });
-
-
-//     return cars;
-// };
-
 const getCarsByHostFromDB = async (hostId: string) => {
     if (!hostId || !Types.ObjectId.isValid(hostId)) {
         throw new ApiError(400, "Invalid hostId");

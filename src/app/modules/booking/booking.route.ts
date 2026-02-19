@@ -63,6 +63,12 @@ router.route("/user")
 //         BookingControllers.confirmBookingAfterPayment,
 //     );
 
+router.route("/host/self")
+    .get(
+        auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+        BookingControllers.getSelfBookingsByHost,
+    );
+
 
 
 export const BookingRoutes = router;

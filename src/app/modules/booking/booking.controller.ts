@@ -1,5 +1,6 @@
 import catchAsync from "../../../shared/catchAsync";
 import sendResponse from "../../../shared/sendResponse";
+import { BOOKING_STATUS } from "./booking.interface";
 import { BookingServices } from "./booking.service";
 
 const createBookingToDB = catchAsync(async (req, res) => {
@@ -93,6 +94,18 @@ const getAllBookings = catchAsync(async (req, res) => {
     });
 });
 
+const getSelfBookingsByHost = catchAsync(async (req, res) => {
+    const { id: hostId } = req.user as { id: string };
+    const { status } = req.query as { status?: BOOKING_STATUS };
+    const result = await BookingServices.getSelfBookingsByHost(hostId, status);
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Self bookings fetched successfully",
+        data: result,
+    });
+});
+
 
 
 export const BookingControllers = {
@@ -103,4 +116,5 @@ export const BookingControllers = {
     cancelBooking,
     // confirmBookingAfterPayment,
     getAllBookings,
+    getSelfBookingsByHost,
 }
