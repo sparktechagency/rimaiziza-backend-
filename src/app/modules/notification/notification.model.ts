@@ -13,6 +13,10 @@ const notificationSchema = new Schema<INotification, NotificationModel>(
       ref: "User",
       required: true,
     },
+    sender: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    },
     referenceId: {
       type: String,
       required: false,
