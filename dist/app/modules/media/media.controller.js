@@ -1,128 +1,80 @@
 "use strict";
-var __awaiter =
-  (this && this.__awaiter) ||
-  function (thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P
-        ? value
-        : new P(function (resolve) {
-            resolve(value);
-          });
-    }
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done
-          ? resolve(result.value)
-          : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
-  };
-var __importDefault =
-  (this && this.__importDefault) ||
-  function (mod) {
-    return mod && mod.__esModule ? mod : { default: mod };
-  };
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MediaControllers = void 0;
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const media_service_1 = require("./media.service");
-const createMedia = (0, catchAsync_1.default)((req, res) =>
-  __awaiter(void 0, void 0, void 0, function* () {
+const createMedia = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const mediaData = req.body;
-    const result =
-      yield media_service_1.MediaServices.createMediaToDB(mediaData);
+    const result = yield media_service_1.MediaServices.createMediaToDB(mediaData);
     (0, sendResponse_1.default)(res, {
-      success: true,
-      statusCode: 200,
-      message: "Successfully create a media data",
-      data: result,
+        success: true,
+        statusCode: 200,
+        message: "Successfully create a media data",
+        data: result,
     });
-  }),
-);
-const getMediaByType = (0, catchAsync_1.default)((req, res) =>
-  __awaiter(void 0, void 0, void 0, function* () {
+}));
+const getMediaByType = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { type, includeInactive } = req.query;
     console.log(type, includeInactive, "Type & IncludeInactive");
     // query string থেকে boolean convert
     const includeInactiveBool = includeInactive === "true";
-    const result = yield media_service_1.MediaServices.getMediaByTypeFromDB(
-      type,
-      includeInactiveBool,
-    );
+    const result = yield media_service_1.MediaServices.getMediaByTypeFromDB(type, includeInactiveBool);
     (0, sendResponse_1.default)(res, {
-      success: true,
-      statusCode: 200,
-      message: "Successfully get media by types",
-      data: result,
+        success: true,
+        statusCode: 200,
+        message: "Successfully get media by types",
+        data: result,
     });
-  }),
-);
-const updateMediaById = (0, catchAsync_1.default)((req, res) =>
-  __awaiter(void 0, void 0, void 0, function* () {
+}));
+const updateMediaById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { mediaId } = req.params;
     const updatedData = req.body;
-    const result = yield media_service_1.MediaServices.updateMediaByIdToDB(
-      mediaId,
-      updatedData,
-    );
+    const result = yield media_service_1.MediaServices.updateMediaByIdToDB(mediaId, updatedData);
     (0, sendResponse_1.default)(res, {
-      success: true,
-      statusCode: 200,
-      message: "Successfully updated media by ID",
-      data: result,
+        success: true,
+        statusCode: 200,
+        message: "Successfully updated media by ID",
+        data: result,
     });
-  }),
-);
-const updateMediaStatus = (0, catchAsync_1.default)((req, res) =>
-  __awaiter(void 0, void 0, void 0, function* () {
+}));
+const updateMediaStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { mediaId } = req.params;
     const { status } = req.body;
-    const result =
-      yield media_service_1.MediaServices.updateMediaStatusByIdToDB(
-        mediaId,
-        status,
-      );
+    const result = yield media_service_1.MediaServices.updateMediaStatusByIdToDB(mediaId, status);
     (0, sendResponse_1.default)(res, {
-      success: true,
-      statusCode: 200,
-      message: "Media status updated successfully",
-      data: result,
+        success: true,
+        statusCode: 200,
+        message: "Media status updated successfully",
+        data: result,
     });
-  }),
-);
-const deleteMedia = (0, catchAsync_1.default)((req, res) =>
-  __awaiter(void 0, void 0, void 0, function* () {
+}));
+const deleteMedia = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { mediaId } = req.params;
-    const result =
-      yield media_service_1.MediaServices.deleteMediaByIdToDB(mediaId);
+    const result = yield media_service_1.MediaServices.deleteMediaByIdToDB(mediaId);
     (0, sendResponse_1.default)(res, {
-      statusCode: 200,
-      success: true,
-      message: "Media deleted successfully",
-      data: result,
+        statusCode: 200,
+        success: true,
+        message: "Media deleted successfully",
+        data: result,
     });
-  }),
-);
+}));
 exports.MediaControllers = {
-  createMedia,
-  getMediaByType,
-  updateMediaById,
-  updateMediaStatus,
-  deleteMedia,
+    createMedia,
+    getMediaByType,
+    updateMediaById,
+    updateMediaStatus,
+    deleteMedia,
 };

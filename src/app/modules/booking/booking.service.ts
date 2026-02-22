@@ -14,6 +14,9 @@ import {
   validateAvailabilityStrictForApproval,
 } from "./booking.utils";
 import { getDynamicCharges } from "../charges/charges.service";
+import { sendNotifications } from "../../../helpers/notificationsHelper";
+import { NOTIFICATION_TYPE } from "../notification/notification.constant";
+import { User } from "../user/user.model";
 
 const createBookingToDB = async (payload: any, userId: string) => {
   await validateAvailabilityStrict(
@@ -41,7 +44,6 @@ const createBookingToDB = async (payload: any, userId: string) => {
     new Date(payload.toDate),
     car,
   );
-
   const result = await Booking.create({
     ...payload,
     hostId: car.assignedHosts,
@@ -49,6 +51,35 @@ const createBookingToDB = async (payload: any, userId: string) => {
     totalAmount,
     isSelfBooking,
   });
+
+
+  //  Send notification to the user, host, and admin
+    await sendNotifications({
+      text: `Booking ${result.bookingId} status is ${result.bookingStatus}`,
+      receiver: result.userId.toString(),
+      type: NOTIFICATION_TYPE.USER,
+      referenceId: result._id.toString(),
+    });
+
+    await sendNotifications({
+      text: `Booking ${result.bookingId} status is ${result.bookingStatus}`,
+      receiver: result.hostId.toString(),
+      type: NOTIFICATION_TYPE.HOST,
+      referenceId: result._id.toString(),
+    });
+
+    const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+      "_id",
+    );
+    if (admin) {
+      await sendNotifications({
+        text: `Booking ${result.bookingId} status is ${result.bookingStatus}`,
+        receiver: admin._id.toString(),
+        type: NOTIFICATION_TYPE.ADMIN,
+        referenceId: result._id.toString(),
+      });
+    }
+
 
   return result;
 };
@@ -190,6 +221,35 @@ const approveBookingByHostFromDB = async (
   booking.bookingStatus = BOOKING_STATUS.PENDING;
   await booking.save();
 
+
+  //  Send notification to the user, host, and admin
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.userId.toString(),
+      type: NOTIFICATION_TYPE.USER,
+      referenceId: booking._id.toString(),
+    });
+
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.hostId.toString(),
+      type: NOTIFICATION_TYPE.HOST,
+      referenceId: booking._id.toString(),
+    });
+
+    const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+      "_id",
+    );
+    if (admin) {
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: admin._id.toString(),
+        type: NOTIFICATION_TYPE.ADMIN,
+        referenceId: booking._id.toString(),
+      });
+    }
+
+
   return booking;
 };
 
@@ -299,6 +359,28 @@ const cancelBookingFromDB = async (
       });
       transaction.status = TRANSACTION_STATUS.REFUNDED;
       await transaction.save();
+
+      
+      // Send refund notification to user and admin
+        await sendNotifications({
+          text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
+          receiver: booking.userId.toString(),
+          type: NOTIFICATION_TYPE.USER,
+          referenceId: booking._id.toString(),
+        });
+
+        const admin = await User.findOne({
+          role: USER_ROLES.SUPER_ADMIN,
+        }).select("_id");
+        if (admin) {
+          await sendNotifications({
+            text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
+            receiver: admin._id.toString(),
+            type: NOTIFICATION_TYPE.ADMIN,
+            referenceId: booking._id.toString(),
+          });
+        }
+      
     }
   }
 
@@ -312,6 +394,35 @@ const cancelBookingFromDB = async (
   if (booking.carId) {
     await Car.findByIdAndUpdate(booking.carId._id, { isAvailable: true });
   }
+
+
+  // Send notification to the user, host, and admin
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.userId.toString(),
+      type: NOTIFICATION_TYPE.USER,
+      referenceId: booking._id.toString(),
+    });
+
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.hostId.toString(),
+      type: NOTIFICATION_TYPE.HOST,
+      referenceId: booking._id.toString(),
+    });
+    
+    const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+      "_id",
+    );
+    if (admin) {
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: admin._id.toString(),
+        type: NOTIFICATION_TYPE.ADMIN,
+        referenceId: booking._id.toString(),
+      });
+    }
+ 
 
   return booking;
 };

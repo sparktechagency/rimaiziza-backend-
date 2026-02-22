@@ -6,8 +6,8 @@
 <!-- NOTIFICATIONS -->
 1. Car - Add, Update, Delete -->ADMIN (DONE)
 2. New Signup --> ADMIN (DONE)
-3. Order Status Changes -->USER,HOST,ADMIN
-4. Host - Add, Update, Delete -->ADMIN
-5. Refund -->USER
+3. Host - Add,Delete -->ADMIN (DONE)
+4. Order Status Changes -->USER,HOST,ADMIN
+5. Refund -->USER, ADMIN
 6. Payment Transfer --> ADMIN,HOST
 7. Rating --> HOST,USER

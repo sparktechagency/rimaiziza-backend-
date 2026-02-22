@@ -2,6 +2,8 @@ import { Types } from "mongoose";
 import ApiError from "../../../errors/ApiErrors";
 import { IReview, REVIEW_TARGET_TYPE } from "./review.interface";
 import { Review } from "./review.model";
+import { sendNotifications } from "../../../helpers/notificationsHelper";
+import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 
 // Create review (dual: host <-> user)
 const createReview = async (payload: IReview, reviewerId: string) => {
@@ -36,6 +38,20 @@ const createReview = async (payload: IReview, reviewerId: string) => {
     feedback: feedback?.trim(),
     reviewType,
   });
+
+
+  //  Send notification to the target (host or user)
+    const type =
+      reviewType === REVIEW_TARGET_TYPE.HOST
+        ? NOTIFICATION_TYPE.HOST
+        : NOTIFICATION_TYPE.USER;
+    await sendNotifications({
+      text: `You received a new rating (${ratingValue} star)`,
+      receiver: review.reviewForId.toString(),
+      type,
+      referenceId: review._id.toString(),
+    });
+
 
   return review;
 };

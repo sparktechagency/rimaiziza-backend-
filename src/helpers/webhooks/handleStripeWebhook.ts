@@ -7,6 +7,9 @@ import {
 import { Transaction } from "../../app/modules/transaction/transaction.model";
 import { User } from "../../app/modules/user/user.model";
 import stripe from "../../config/stripe";
+import { sendNotifications } from "../notificationsHelper";
+import { NOTIFICATION_TYPE } from "../../app/modules/notification/notification.constant";
+import { USER_ROLES } from "../../enums/user";
 
 /** -------------------------- STRIPE WEBHOOK HELPERS -------------------------- */
 
@@ -34,6 +37,37 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
     console.log(
       `⚠ Booking ${transaction.bookingId} already confirmed or invalid state`,
     );
+
+  // Send notification to the user, host, and admin
+  if (booking) {
+
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.userId.toString(),
+      type: NOTIFICATION_TYPE.USER,
+      referenceId: booking._id.toString(),
+    });
+
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.hostId.toString(),
+      type: NOTIFICATION_TYPE.HOST,
+      referenceId: booking._id.toString(),
+    });
+
+    const admin = await User.findOne({
+      role: USER_ROLES.SUPER_ADMIN,
+    }).select("_id");
+    if (admin) {
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: admin._id.toString(),
+        type: NOTIFICATION_TYPE.ADMIN,
+        referenceId: booking._id.toString(),
+      });
+    }
+
+  }
 };
 
 // Handle extend booking success
@@ -193,6 +227,35 @@ export const markBookingOngoing = async (bookingId: string) => {
     booking.checkedInAt = now;
     await booking.save();
     console.log(`Booking ${booking._id} marked as ONGOING`);
+
+    
+    // send notification status user, host and admin
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: booking.userId.toString(),
+        type: NOTIFICATION_TYPE.USER,
+        referenceId: booking._id.toString(),
+      });
+
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: booking.hostId.toString(),
+        type: NOTIFICATION_TYPE.HOST,
+        referenceId: booking._id.toString(),
+      });
+
+      const admin = await User.findOne({
+        role: USER_ROLES.SUPER_ADMIN,
+      }).select("_id");
+      if (admin) {
+        await sendNotifications({
+          text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+          receiver: admin._id.toString(),
+          type: NOTIFICATION_TYPE.ADMIN,
+          referenceId: booking._id.toString(),
+        });
+      }
+  
   }
 };
 
@@ -234,7 +297,7 @@ export const markBookingCompleted = async (bookingId: string) => {
     ) {
       try {
         await stripe.transfers.create({
-          amount: Math.round(transaction.charges.hostCommission * 100), // cents
+          amount: Math.round(transaction.charges.hostCommission * 100),
           currency: process.env.CURRENCY!,
           destination: host.stripeConnectedAccountId,
           description: `Host commission for booking ${booking._id}`,
@@ -247,6 +310,27 @@ export const markBookingCompleted = async (bookingId: string) => {
         console.log(
           `✅ Host commission transferred for booking ${booking._id}`,
         );
+        
+        // send notification status host and admin
+          await sendNotifications({
+            text: `Payout sent for booking ${booking.bookingId}`,
+            receiver: booking.hostId.toString(),
+            type: NOTIFICATION_TYPE.HOST,
+            referenceId: booking._id.toString(),
+          });
+          
+          const admin = await User.findOne({
+            role: USER_ROLES.SUPER_ADMIN,
+          }).select("_id");
+          if (admin) {
+            await sendNotifications({
+              text: `Payout sent for booking ${booking.bookingId}`,
+              receiver: admin._id.toString(),
+              type: NOTIFICATION_TYPE.ADMIN,
+              referenceId: booking._id.toString(),
+            });
+          }
+      
       } catch (err: any) {
         console.error(
           `Failed to transfer host commission for booking ${booking._id}:`,
