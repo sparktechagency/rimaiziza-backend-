@@ -1,13 +1,9 @@
 import { Types } from "mongoose";
-import config from "../../../config";
 import stripe from "../../../config/stripe";
 import ApiError from "../../../errors/ApiErrors";
 import { BOOKING_STATUS } from "../booking/booking.interface";
 import { Booking } from "../booking/booking.model";
-import {
-  calculateExtendBookingAmount,
-  calculateFirstTimeBookingAmount,
-} from "../booking/booking.utils";
+import { calculateExtendBookingAmount } from "../booking/booking.utils";
 import { ICar } from "../car/car.interface";
 import { validateAvailabilityStrict } from "../car/car.utils";
 import { getDynamicCharges } from "../charges/charges.service";
@@ -79,45 +75,45 @@ const createBookingPaymentSession = async (
 
   if (!booking) throw new Error("Booking not found");
 
-  // State validation
+  // state validation
   if (booking.bookingStatus !== BOOKING_STATUS.PENDING) {
     throw new Error("Booking not payable");
   }
 
-  //  Ownership validation (MUST)
+  //  ownership validation (MUST)
   if (!booking.userId.equals(userId)) {
     throw new Error("Unauthorized booking payment");
   }
 
-  //  Self booking block
+  //  self booking block
   if (booking.isSelfBooking) {
     throw new Error("Self booking does not require payment");
   }
 
-  //  Cancelled check
+  //  cancelled check
   if (booking.isCanceledByUser || booking.isCanceledByHost) {
     throw new Error("Cancelled booking cannot be paid");
   }
 
-  // Availability check (strict)
+  // availability check (strict)
   await validateAvailabilityStrict(
     (booking.carId as any)._id.toString(),
     booking.fromDate,
     booking.toDate,
   );
 
-  //  Car + deposit
+  //  car + deposit
   const car = booking.carId as any;
   if (!car) throw new Error("Car details not found");
 
   const totalAmount = booking.totalAmount;
 
-  //  Dynamic charges calculation
+  //  dynamic charges calculation
   const charges = await getDynamicCharges({
     totalAmount: booking.totalAmount,
   });
 
-  //  Create transaction
+  //  create transaction
   const transaction = await Transaction.create({
     bookingId: booking._id,
     userId,
@@ -132,7 +128,7 @@ const createBookingPaymentSession = async (
     },
   });
 
-  //  Create Stripe session
+  //  create Stripe session
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
@@ -190,14 +186,14 @@ const createExtendBookingPaymentSession = async (
     );
   }
 
-  // Availability check
+  // availability check
   await validateAvailabilityStrict(
     (booking.carId as any)._id.toString(),
     booking.toDate,
     newToDate,
   );
 
-  // Calculate extended amount
+  // calculate extended amount
   const car = booking.carId as any;
   const extendedAmount = calculateExtendBookingAmount(
     booking.toDate,
@@ -207,7 +203,7 @@ const createExtendBookingPaymentSession = async (
 
   console.log(extendedAmount, "EXTENDED AMOUNT");
 
-  // Create transaction
+  // create transaction
   const transaction = await Transaction.create({
     bookingId: booking._id,
     userId,
@@ -218,7 +214,7 @@ const createExtendBookingPaymentSession = async (
     extendToDate: newToDate,
   });
 
-  // Create Stripe session
+  // create Stripe session
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],

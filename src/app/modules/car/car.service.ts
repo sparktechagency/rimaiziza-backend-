@@ -911,7 +911,7 @@ const getCarsByHostFromDB = async (hostId: string) => {
 
   const objectHostId = new Types.ObjectId(hostId);
 
-  // 🔹 Single car fetch
+  // Single car fetch
   const car = await Car.findOne({
     assignedHosts: hostId,
     isActive: true,
