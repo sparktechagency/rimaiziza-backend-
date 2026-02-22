@@ -21,6 +21,8 @@ import { REVIEW_TARGET_TYPE } from "../review/review.interface";
 import { Car } from "../car/car.model";
 import { getCarTripCount, getCarTripCountMap } from "../car/car.utils";
 import bcrypt from "bcrypt";
+import { sendNotifications } from "../../../helpers/notificationsHelper";
+import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 
 // --- ADMIN SERVICES ---
 const createAdminToDB = async (payload: any): Promise<IUser> => {
@@ -118,6 +120,20 @@ const createHostToDB = async (payload: any) => {
   };
 
   const createHost = await User.create(hostPayload);
+
+  // notify admin
+    const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+    "_id name",
+  );
+
+  if (admin) {
+    await sendNotifications({
+      text: `New host account created successfully by admin (${admin.name || admin._id})`,
+      receiver: admin._id.toString(),
+      type: NOTIFICATION_TYPE.ADMIN,
+      referenceId: createHost._id.toString(),
+    });
+  }
 
   return createHost;
 };
@@ -447,6 +463,20 @@ const deleteHostByIdFromD = async (id: string) => {
     throw new ApiError(400, "Failed to delete user by this ID");
   }
 
+  // notify admin
+   const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+    "_id name",
+  );
+
+  if (admin) {
+    await sendNotifications({
+      text: `Host deleted successfully by admin (${admin.name || admin._id})`,
+      receiver: admin._id.toString(),
+      type: NOTIFICATION_TYPE.ADMIN,
+      referenceId: result._id.toString(),
+    });
+  }
+
   return result;
 };
 
@@ -515,6 +545,20 @@ const createUserToDB = async (payload: any) => {
     token: createToken,
     user: createUser,
   };
+
+  // notify admin
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(    
+    "_id name",
+  );
+
+  if (admin) {
+    await sendNotifications({
+      text: `New user signed up successfully by admin (${admin.name || admin._id})`,
+      receiver: admin._id.toString(),
+      type: NOTIFICATION_TYPE.ADMIN,
+      referenceId: result.user._id.toString(),
+    });
+  }
 
   return result;
 };

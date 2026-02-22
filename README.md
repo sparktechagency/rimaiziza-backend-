@@ -4,8 +4,8 @@
 4. search a pickup date, time diye filter kora jabe aita baki ase
 
 <!-- NOTIFICATIONS -->
-1. Car - Add, Update, Delete -->ADMIN
-2. New Signup --> ADMIN
+1. Car - Add, Update, Delete -->ADMIN (DONE)
+2. New Signup --> ADMIN (DONE)
 3. Order Status Changes -->USER,HOST,ADMIN
 4. Host - Add, Update, Delete -->ADMIN
 5. Refund -->USER
