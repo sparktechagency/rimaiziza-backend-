@@ -40,6 +40,21 @@ const createCarToDB = async (payload: ICar) => {
   }
 
   const result = await Car.create(payload);
+
+
+  const admin = await User.findOne({
+    role: USER_ROLES.SUPER_ADMIN,
+  }).select("_id name");
+
+  if (admin) {
+    await sendNotifications({
+      text: `Car created successfully by admin (${admin.name || admin._id})`,
+      receiver: admin._id.toString(),
+      type: NOTIFICATION_TYPE.ADMIN,
+      referenceId: result._id.toString(),
+    });
+  }
+
   return result;
 };
 
@@ -85,10 +100,10 @@ export type ArrayActionValue =
   | string
   | Types.ObjectId
   | {
-      label: string;
-      value: string;
-      icon?: string;
-    };
+    label: string;
+    value: string;
+    icon?: string;
+  };
 
 export interface IArrayAction {
   field: "images" | "availableDays" | "facilities" | "assignedHosts";
@@ -197,6 +212,20 @@ const updateCarByIdToDB = async (
     throw new ApiError(404, "Car not found or not owned by user");
   }
 
+  // notify admin
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+    "_id name",
+  );
+
+  if (admin) {
+    await sendNotifications({
+      text: `Car updated successfully by admin (${admin.name || admin._id})`,
+      receiver: admin._id.toString(),
+      type: NOTIFICATION_TYPE.ADMIN,
+      referenceId: updated._id.toString(),
+    });
+  }
+
   return updated;
 };
 
@@ -211,12 +240,12 @@ const deleteCarByIdFromDB = async (id: string) => {
   // -------------------------- NOTIFICATIONS --------------------------
 
   const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
-    "_id",
+    "_id name",
   );
 
   if (admin) {
     await sendNotifications({
-      text: `Car deleted successfully by admin (${admin.phone || admin._id})`,
+      text: `Car deleted successfully by admin (${admin.name || admin._id})`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
       referenceId: result._id.toString(),

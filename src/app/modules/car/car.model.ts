@@ -114,6 +114,10 @@ const CarSchema = new Schema<ICar>(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    carType: {
+      type: String,
+      required: false,
+    },
     dailyPrice: {
       type: Number,
       required: true,

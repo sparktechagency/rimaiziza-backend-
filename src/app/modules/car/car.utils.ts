@@ -7,6 +7,9 @@ import { BOOKING_STATUS } from "../booking/booking.interface";
 import { CarServices } from "./car.service";
 import ApiError from "../../../errors/ApiErrors";
 import { Car } from "./car.model";
+import { USER_ROLES } from "../../../enums/user";
+import { sendNotifications } from "../../../helpers/notificationsHelper";
+import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 
 export const getTargetLocation = async (
   queryLat?: string | number,
@@ -333,4 +336,25 @@ export const validateAvailabilityStrict = async (
   }
 
   return true; // all good
+};
+
+
+export const notifyAdminCarAction = async (
+  action: "created" | "updated" | "deleted",
+  carId: string
+) => {
+  const admin = await User.findOne({
+    role: USER_ROLES.SUPER_ADMIN,
+  }).select("_id name");
+
+  console.log(admin, "ADMIN");
+
+  if (!admin) return;
+
+  await sendNotifications({
+    text: `Car ${action} successfully by admin (${admin.name || admin._id})`,
+    receiver: admin._id.toString(),
+    type: NOTIFICATION_TYPE.ADMIN,
+    referenceId: carId,
+  });
 };
