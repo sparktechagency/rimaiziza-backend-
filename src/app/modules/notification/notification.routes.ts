@@ -4,16 +4,18 @@ import { USER_ROLES } from "../../../enums/user";
 import { NotificationController } from "./notification.controller";
 const router = express.Router();
 
-router.route("/")
+router
+  .route("/")
   .get(
-    auth(USER_ROLES.USER,USER_ROLES.HOST),
+    auth(USER_ROLES.USER, USER_ROLES.HOST),
     NotificationController.getNotificationFromDB,
   )
   .patch(
-    auth(USER_ROLES.USER,USER_ROLES.HOST),
+    auth(USER_ROLES.USER, USER_ROLES.HOST),
     NotificationController.readNotification,
   );
-router.route("/admin")
+router
+  .route("/admin")
   .get(
     auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
     NotificationController.adminNotificationFromDB,
@@ -22,6 +24,5 @@ router.route("/admin")
     auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
     NotificationController.adminReadNotification,
   );
-
 
 export const NotificationRoutes = router;

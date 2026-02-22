@@ -40,7 +40,6 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
 
   // Send notification to the user, host, and admin
   if (booking) {
-
     await sendNotifications({
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.userId.toString(),
@@ -66,7 +65,6 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
         referenceId: booking._id.toString(),
       });
     }
-
   }
 };
 
@@ -228,34 +226,32 @@ export const markBookingOngoing = async (bookingId: string) => {
     await booking.save();
     console.log(`Booking ${booking._id} marked as ONGOING`);
 
-    
     // send notification status user, host and admin
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.userId.toString(),
+      type: NOTIFICATION_TYPE.USER,
+      referenceId: booking._id.toString(),
+    });
+
+    await sendNotifications({
+      text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+      receiver: booking.hostId.toString(),
+      type: NOTIFICATION_TYPE.HOST,
+      referenceId: booking._id.toString(),
+    });
+
+    const admin = await User.findOne({
+      role: USER_ROLES.SUPER_ADMIN,
+    }).select("_id");
+    if (admin) {
       await sendNotifications({
         text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
-        receiver: booking.userId.toString(),
-        type: NOTIFICATION_TYPE.USER,
+        receiver: admin._id.toString(),
+        type: NOTIFICATION_TYPE.ADMIN,
         referenceId: booking._id.toString(),
       });
-
-      await sendNotifications({
-        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
-        receiver: booking.hostId.toString(),
-        type: NOTIFICATION_TYPE.HOST,
-        referenceId: booking._id.toString(),
-      });
-
-      const admin = await User.findOne({
-        role: USER_ROLES.SUPER_ADMIN,
-      }).select("_id");
-      if (admin) {
-        await sendNotifications({
-          text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
-          receiver: admin._id.toString(),
-          type: NOTIFICATION_TYPE.ADMIN,
-          referenceId: booking._id.toString(),
-        });
-      }
-  
+    }
   }
 };
 
@@ -310,27 +306,26 @@ export const markBookingCompleted = async (bookingId: string) => {
         console.log(
           `✅ Host commission transferred for booking ${booking._id}`,
         );
-        
+
         // send notification status host and admin
+        await sendNotifications({
+          text: `Payout sent for booking ${booking.bookingId}`,
+          receiver: booking.hostId.toString(),
+          type: NOTIFICATION_TYPE.HOST,
+          referenceId: booking._id.toString(),
+        });
+
+        const admin = await User.findOne({
+          role: USER_ROLES.SUPER_ADMIN,
+        }).select("_id");
+        if (admin) {
           await sendNotifications({
             text: `Payout sent for booking ${booking.bookingId}`,
-            receiver: booking.hostId.toString(),
-            type: NOTIFICATION_TYPE.HOST,
+            receiver: admin._id.toString(),
+            type: NOTIFICATION_TYPE.ADMIN,
             referenceId: booking._id.toString(),
           });
-          
-          const admin = await User.findOne({
-            role: USER_ROLES.SUPER_ADMIN,
-          }).select("_id");
-          if (admin) {
-            await sendNotifications({
-              text: `Payout sent for booking ${booking.bookingId}`,
-              receiver: admin._id.toString(),
-              type: NOTIFICATION_TYPE.ADMIN,
-              referenceId: booking._id.toString(),
-            });
-          }
-      
+        }
       } catch (err: any) {
         console.error(
           `Failed to transfer host commission for booking ${booking._id}:`,

@@ -39,19 +39,17 @@ const createReview = async (payload: IReview, reviewerId: string) => {
     reviewType,
   });
 
-
   //  Send notification to the target (host or user)
-    const type =
-      reviewType === REVIEW_TARGET_TYPE.HOST
-        ? NOTIFICATION_TYPE.HOST
-        : NOTIFICATION_TYPE.USER;
-    await sendNotifications({
-      text: `You received a new rating (${ratingValue} star)`,
-      receiver: review.reviewForId.toString(),
-      type,
-      referenceId: review._id.toString(),
-    });
-
+  const type =
+    reviewType === REVIEW_TARGET_TYPE.HOST
+      ? NOTIFICATION_TYPE.HOST
+      : NOTIFICATION_TYPE.USER;
+  await sendNotifications({
+    text: `You received a new rating (${ratingValue} star)`,
+    receiver: review.reviewForId.toString(),
+    type,
+    referenceId: review._id.toString(),
+  });
 
   return review;
 };

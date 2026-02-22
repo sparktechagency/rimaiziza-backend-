@@ -34,7 +34,6 @@ const readNotificationToDB = async (
   return result;
 };
 
-
 // get notifications for admin
 const adminNotificationFromDB = async (query: any) => {
   const baseQuery = Notification.find({ type: NOTIFICATION_TYPE.ADMIN });

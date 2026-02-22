@@ -45,7 +45,7 @@ export interface ICar {
   seatNumber: number;
   color: string;
   about: string;
-  carType:string;
+  carType: string;
   shortDescription: string;
   licensePlate: string;
   vin?: string;

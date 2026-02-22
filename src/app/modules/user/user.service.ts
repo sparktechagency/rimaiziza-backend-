@@ -122,7 +122,7 @@ const createHostToDB = async (payload: any) => {
   const createHost = await User.create(hostPayload);
 
   // notify admin
-    const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
     "_id name",
   );
 
@@ -464,7 +464,7 @@ const deleteHostByIdFromD = async (id: string) => {
   }
 
   // notify admin
-   const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
     "_id name",
   );
 
@@ -547,7 +547,7 @@ const createUserToDB = async (payload: any) => {
   };
 
   // notify admin
-  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(    
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
     "_id name",
   );
 

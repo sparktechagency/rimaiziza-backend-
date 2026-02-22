@@ -338,10 +338,9 @@ export const validateAvailabilityStrict = async (
   return true; // all good
 };
 
-
 export const notifyAdminCarAction = async (
   action: "created" | "updated" | "deleted",
-  carId: string
+  carId: string,
 ) => {
   const admin = await User.findOne({
     role: USER_ROLES.SUPER_ADMIN,

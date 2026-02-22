@@ -41,7 +41,6 @@ const createCarToDB = async (payload: ICar) => {
 
   const result = await Car.create(payload);
 
-
   const admin = await User.findOne({
     role: USER_ROLES.SUPER_ADMIN,
   }).select("_id name");
@@ -100,10 +99,10 @@ export type ArrayActionValue =
   | string
   | Types.ObjectId
   | {
-    label: string;
-    value: string;
-    icon?: string;
-  };
+      label: string;
+      value: string;
+      icon?: string;
+    };
 
 export interface IArrayAction {
   field: "images" | "availableDays" | "facilities" | "assignedHosts";

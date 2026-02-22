@@ -44,7 +44,6 @@ const adminNotificationFromDB = catchAsync(
   },
 );
 
-
 const adminReadNotification = catchAsync(
   async (req: Request, res: Response) => {
     const result = await NotificationService.adminReadNotificationToDB();
