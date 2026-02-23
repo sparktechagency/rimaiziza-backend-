@@ -15,11 +15,14 @@ router.route("/host").get(auth(USER_ROLES.HOST), CarControllers.getCarsByHost);
 
 router
   .route("/user/:id")
-  .get(auth(USER_ROLES.USER,USER_ROLES.HOST), CarControllers.getCarByIdForUser);
+  .get(
+    auth(USER_ROLES.USER, USER_ROLES.HOST),
+    CarControllers.getCarByIdForUser,
+  );
 
 router
   .route("/availability/:carId")
-  .get(auth(USER_ROLES.USER,USER_ROLES.HOST), CarControllers.getAvailability);
+  .get(auth(USER_ROLES.USER, USER_ROLES.HOST), CarControllers.getAvailability);
 
 router
   .route("/")

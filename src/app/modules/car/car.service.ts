@@ -828,9 +828,7 @@ const getNearbyCarsFromDB = async (params: any) => {
   }
 
   // -------------------- TRIPS --------------------
-  const tripCountMap = await getCarTripCountMap(
-    filteredCars.map((c) => c._id),
-  );
+  const tripCountMap = await getCarTripCountMap(filteredCars.map((c) => c._id));
   filteredCars.forEach((car) => {
     (car as any).trips = tripCountMap[car._id.toString()] ?? 0;
   });

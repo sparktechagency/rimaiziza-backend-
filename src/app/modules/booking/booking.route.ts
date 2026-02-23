@@ -90,6 +90,4 @@ router
     BookingControllers.getUserBookingById,
   );
 
-
-
 export const BookingRoutes = router;

@@ -187,10 +187,7 @@ const getUserBookingsFromDB = async (userId: string, query: any) => {
   };
 };
 
-const getHostBookingByIdFromDB = async (
-  bookingId: string,
-  hostId: string,
-) => {
+const getHostBookingByIdFromDB = async (bookingId: string, hostId: string) => {
   if (!Types.ObjectId.isValid(bookingId)) {
     throw new ApiError(400, "Invalid booking id");
   }
@@ -208,7 +205,7 @@ const getHostBookingByIdFromDB = async (
     .populate("hostId")
     .lean();
 
-    console.log(booking, "Booking");
+  console.log(booking, "Booking");
 
   if (!booking) {
     throw new ApiError(404, "Booking not found");
@@ -217,10 +214,7 @@ const getHostBookingByIdFromDB = async (
   return booking;
 };
 
-const getUserBookingByIdFromDB = async (
-  bookingId: string,
-  userId: string,
-) => {
+const getUserBookingByIdFromDB = async (bookingId: string, userId: string) => {
   if (!Types.ObjectId.isValid(bookingId)) {
     throw new ApiError(400, "Invalid booking id");
   }
