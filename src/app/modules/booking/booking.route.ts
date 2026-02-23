@@ -35,6 +35,10 @@ router
 
 router
   .route("/host/:bookingId")
+  .get(
+    auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    BookingControllers.getHostBookingById,
+  )
   .patch(
     auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
     BookingControllers.approveBookingByHost,
@@ -78,5 +82,14 @@ router
     auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
     BookingControllers.getSelfBookingsByHost,
   );
+
+router
+  .route("/user/:bookingId")
+  .get(
+    auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    BookingControllers.getUserBookingById,
+  );
+
+
 
 export const BookingRoutes = router;

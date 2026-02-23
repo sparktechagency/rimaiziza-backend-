@@ -187,6 +187,63 @@ const getUserBookingsFromDB = async (userId: string, query: any) => {
   };
 };
 
+const getHostBookingByIdFromDB = async (
+  bookingId: string,
+  hostId: string,
+) => {
+  if (!Types.ObjectId.isValid(bookingId)) {
+    throw new ApiError(400, "Invalid booking id");
+  }
+
+  if (!Types.ObjectId.isValid(hostId)) {
+    throw new ApiError(400, "Invalid host id");
+  }
+
+  const booking = await Booking.findOne({
+    _id: new Types.ObjectId(bookingId),
+    hostId: new Types.ObjectId(hostId),
+  })
+    .populate("carId")
+    .populate("userId")
+    .populate("hostId")
+    .lean();
+
+    console.log(booking, "Booking");
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found");
+  }
+
+  return booking;
+};
+
+const getUserBookingByIdFromDB = async (
+  bookingId: string,
+  userId: string,
+) => {
+  if (!Types.ObjectId.isValid(bookingId)) {
+    throw new ApiError(400, "Invalid booking id");
+  }
+
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const booking = await Booking.findOne({
+    _id: new Types.ObjectId(bookingId),
+    userId: new Types.ObjectId(userId),
+  })
+    .populate("carId")
+    .populate("hostId")
+    .lean();
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found");
+  }
+
+  return booking;
+};
+
 const approveBookingByHostFromDB = async (
   bookingId: string,
   hostId: string,
@@ -581,6 +638,8 @@ export const BookingServices = {
   createBookingToDB,
   getHostBookingsFromDB,
   getUserBookingsFromDB,
+  getHostBookingByIdFromDB,
+  getUserBookingByIdFromDB,
   approveBookingByHostFromDB,
   cancelBookingFromDB,
   // confirmBookingAfterPaymentFromDB,

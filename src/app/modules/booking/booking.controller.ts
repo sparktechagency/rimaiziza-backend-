@@ -28,6 +28,23 @@ const getHostBookings = catchAsync(async (req, res) => {
   });
 });
 
+const getHostBookingById = catchAsync(async (req, res) => {
+  const { id: hostId } = req.user as { id: string };
+  const { bookingId } = req.params;
+
+  const result = await BookingServices.getHostBookingByIdFromDB(
+    bookingId,
+    hostId,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Host booking fetched successfully by id",
+    data: result,
+  });
+});
+
 const getUserBookings = catchAsync(async (req, res) => {
   const { id: userId } = req.user as { id: string };
 
@@ -36,6 +53,23 @@ const getUserBookings = catchAsync(async (req, res) => {
     statusCode: 200,
     success: true,
     message: "User bookings fetched successfully",
+    data: result,
+  });
+});
+
+const getUserBookingById = catchAsync(async (req, res) => {
+  const { id: userId } = req.user as { id: string };
+  const { bookingId } = req.params;
+
+  const result = await BookingServices.getUserBookingByIdFromDB(
+    bookingId,
+    userId,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User booking fetched successfully by id",
     data: result,
   });
 });
@@ -112,7 +146,9 @@ const getSelfBookingsByHost = catchAsync(async (req, res) => {
 export const BookingControllers = {
   createBookingToDB,
   getHostBookings,
+  getHostBookingById,
   getUserBookings,
+  getUserBookingById,
   approveBookingByHost,
   cancelBooking,
   // confirmBookingAfterPayment,

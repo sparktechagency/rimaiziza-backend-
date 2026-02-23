@@ -13,6 +13,7 @@ import {
   getCarTripCount,
   getCarTripCountMap,
   getTargetLocation,
+  validateAvailabilityStrict,
 } from "./car.utils";
 import { FavoriteCar } from "../favoriteCar/favoriteCar.model";
 import { Booking } from "../booking/booking.model";
@@ -503,6 +504,8 @@ const parseQueryParams = (params: any) => {
     sortBy = "price",
     sortOrder = "asc",
     userId,
+    pickupDateTime,
+    returnDateTime,
   } = params;
 
   // Parse facilities (comma-separated string to array)
@@ -567,6 +570,10 @@ const parseQueryParams = (params: any) => {
     availableDays: parsedAvailableDays,
     sortBy: sortBy as string,
     sortOrder: sortOrder as string,
+    pickupDateTime:
+      typeof pickupDateTime === "string" ? pickupDateTime : undefined,
+    returnDateTime:
+      typeof returnDateTime === "string" ? returnDateTime : undefined,
   };
 };
 
@@ -596,6 +603,8 @@ const getNearbyCarsFromDB = async (params: any) => {
     availableDays,
     sortBy,
     sortOrder,
+    pickupDateTime,
+    returnDateTime,
   } = parsedParams;
 
   // ১. Target location only if lat/lng provided
@@ -761,6 +770,34 @@ const getNearbyCarsFromDB = async (params: any) => {
   // ৪. Execute aggregation
   const cars = await Car.aggregate(pipeline);
 
+  let filteredCars = cars;
+
+  if (pickupDateTime && returnDateTime) {
+    const from = new Date(pickupDateTime);
+    const to = new Date(returnDateTime);
+
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+      throw new ApiError(400, "Invalid pickup or return datetime");
+    }
+
+    if (from >= to) {
+      throw new ApiError(400, "Return datetime must be after pickup datetime");
+    }
+
+    const availabilityFlags = await Promise.all(
+      cars.map(async (car) => {
+        try {
+          await validateAvailabilityStrict(car._id.toString(), from, to);
+          return true;
+        } catch {
+          return false;
+        }
+      }),
+    );
+
+    filteredCars = cars.filter((_, index) => availabilityFlags[index]);
+  }
+
   // ৫. Attach isFavorite
   // if (userId && cars.length > 0) {
   //     const carIds = cars.map((car) => car._id);
@@ -778,7 +815,7 @@ const getNearbyCarsFromDB = async (params: any) => {
   // }
 
   // -------------------- REVIEWS --------------------
-  const hostIds = cars
+  const hostIds = filteredCars
     .map((c) => c.assignedHosts)
     .filter(Boolean)
     .map((id) => id.toString());
@@ -791,14 +828,16 @@ const getNearbyCarsFromDB = async (params: any) => {
   }
 
   // -------------------- TRIPS --------------------
-  const tripCountMap = await getCarTripCountMap(cars.map((c) => c._id));
-  cars.forEach((car) => {
+  const tripCountMap = await getCarTripCountMap(
+    filteredCars.map((c) => c._id),
+  );
+  filteredCars.forEach((car) => {
     (car as any).trips = tripCountMap[car._id.toString()] ?? 0;
   });
 
   // -------------------- FAVORITES + Attach reviews --------------------
-  if (userId && cars.length > 0) {
-    const carIds = cars.map((c) => c._id);
+  if (userId && filteredCars.length > 0) {
+    const carIds = filteredCars.map((c) => c._id);
     const favorites = await FavoriteCar.find({
       userId,
       referenceId: { $in: carIds },
@@ -807,7 +846,7 @@ const getNearbyCarsFromDB = async (params: any) => {
       favorites.map((f) => [f.referenceId.toString(), true]),
     );
 
-    cars.forEach((car) => {
+    filteredCars.forEach((car) => {
       car.isFavorite = !!favMap.get(car._id.toString());
       const hostId = car.assignedHosts?.toString();
       const review = hostId ? reviewMap.get(hostId) : null;
@@ -818,7 +857,7 @@ const getNearbyCarsFromDB = async (params: any) => {
       car.reviews = review?.reviews ?? [];
     });
   } else {
-    cars.forEach((car) => {
+    filteredCars.forEach((car) => {
       car.isFavorite = false;
       car.averageRating = 0;
       car.totalReviews = 0;
@@ -828,14 +867,15 @@ const getNearbyCarsFromDB = async (params: any) => {
   }
 
   return {
-    cars,
-    total: cars.length,
+    cars: filteredCars,
+    total: filteredCars.length,
     filters: {
       location: { lat, lng, maxDistanceKm, country, state, city },
       price: { minPrice, maxPrice },
       search: searchTerm,
       vehicle: { brand, transmission, fuelType, seatNumber, minYear, maxYear },
       preferences: { facilities, availableDays },
+      timeRange: { pickupDateTime, returnDateTime },
       sorting: { sortBy, sortOrder },
     },
   };

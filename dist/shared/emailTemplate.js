@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailTemplate = void 0;
 const createAccount = (values) => {
-  const data = {
-    to: values.email,
-    subject: "Verify your account",
-    html: `
+    const data = {
+        to: values.email,
+        subject: "Verify your account",
+        html: `
             <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 50px; padding: 20px; color: #555;">
                 <div style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
     
@@ -32,14 +32,14 @@ const createAccount = (values) => {
                 </div>
             </body>
         `,
-  };
-  return data;
+    };
+    return data;
 };
 const resetPassword = (values) => {
-  const data = {
-    to: values.email,
-    subject: "GO CONNECTE – Password Reset Code",
-    html: `
+    const data = {
+        to: values.email,
+        subject: "GO CONNECTE – Password Reset Code",
+        html: `
       <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 50px; padding: 20px; color: #555;">
         <div style="width: 100%; max-width: 600px; margin: 0 auto; padding: 0; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); overflow: hidden;">
 
@@ -91,10 +91,10 @@ const resetPassword = (values) => {
         </div>
       </body>
     `,
-  };
-  return data;
+    };
+    return data;
 };
 exports.emailTemplate = {
-  createAccount,
-  resetPassword,
+    createAccount,
+    resetPassword,
 };
