@@ -10,6 +10,7 @@ import { Car } from "./car.model";
 import { USER_ROLES } from "../../../enums/user";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
+import { TRANSACTION_STATUS } from "../transaction/transaction.interface";
 
 export const getTargetLocation = async (
   queryLat?: string | number,
@@ -356,4 +357,43 @@ export const notifyAdminCarAction = async (
     type: NOTIFICATION_TYPE.ADMIN,
     referenceId: carId,
   });
+};
+
+export const checkIfUserHasPaid = async (
+  carId: string,
+  userId: string,
+): Promise<boolean> => {
+  if (!userId || !Types.ObjectId.isValid(userId)) return false;
+  if (!carId || !Types.ObjectId.isValid(carId)) return false;
+
+  // Find any booking by this user for this car that has a successful payment
+  const paidBooking = await Booking.findOne({
+    carId: new Types.ObjectId(carId),
+    userId: new Types.ObjectId(userId),
+    bookingStatus: {
+      $in: [
+        BOOKING_STATUS.CONFIRMED,
+        BOOKING_STATUS.ONGOING,
+        BOOKING_STATUS.COMPLETED,
+      ],
+    },
+  })
+    .select("_id transactionId isSelfBooking")
+    .populate({
+      path: "transactionId",
+      select: "status",
+    })
+    .lean();
+
+
+  if (!paidBooking) return false;
+
+  // Self bookings don't have a transaction but are considered "paid" (confirmed by host)
+  // Uncomment below if self bookings should also reveal host contact:
+  // if ((paidBooking as any).isSelfBooking) return true;
+
+  const transaction = paidBooking.transactionId as any;
+  if (!transaction) return false;
+
+  return transaction.status === TRANSACTION_STATUS.SUCCESS;
 };

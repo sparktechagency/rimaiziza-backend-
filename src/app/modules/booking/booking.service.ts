@@ -28,13 +28,13 @@ const createBookingToDB = async (payload: any, userId: string) => {
   payload.userId = userId;
 
   const bookingId = await generateBookingId();
-
   payload.bookingId = bookingId;
 
   const car = await Car.findById(payload.carId);
   if (!car) throw new ApiError(404, "Car not found");
 
   const isSelfBooking = car?.assignedHosts?.toString() === userId;
+
   const bookingStatus = isSelfBooking
     ? BOOKING_STATUS.CONFIRMED
     : BOOKING_STATUS.REQUESTED;
@@ -44,40 +44,58 @@ const createBookingToDB = async (payload: any, userId: string) => {
     new Date(payload.toDate),
     car,
   );
+
   const result = await Booking.create({
     ...payload,
     hostId: car.assignedHosts,
-    bookingStatus: bookingStatus,
+    bookingStatus,
     totalAmount,
     isSelfBooking,
   });
 
-  //  Send notification to the user, host, and admin
-  await sendNotifications({
-    text: `Booking ${result.bookingId} status is ${result.bookingStatus}`,
-    receiver: result.userId.toString(),
-    type: NOTIFICATION_TYPE.USER,
-    referenceId: result._id.toString(),
-  });
+  const notificationText = `Booking ${result.bookingId} status is ${result.bookingStatus}`;
 
-  await sendNotifications({
-    text: `Booking ${result.bookingId} status is ${result.bookingStatus}`,
-    receiver: result.hostId.toString(),
-    type: NOTIFICATION_TYPE.HOST,
-    referenceId: result._id.toString(),
-  });
+  // 1️⃣ Collect receivers
+  const receivers = [
+    {
+      receiver: result.userId.toString(),
+      type: NOTIFICATION_TYPE.USER,
+    },
+    {
+      receiver: result.hostId.toString(),
+      type: NOTIFICATION_TYPE.HOST,
+    },
+  ];
 
-  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
-    "_id",
-  );
+  // 2️⃣ Add admin if exists
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select("_id");
   if (admin) {
-    await sendNotifications({
-      text: `Booking ${result.bookingId} status is ${result.bookingStatus}`,
+    receivers.push({
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
-      referenceId: result._id.toString(),
     });
   }
+
+  // 3️⃣ Deduplicate by receiver
+  const uniqueReceivers = new Map<string, typeof receivers[0]>();
+
+  for (const r of receivers) {
+    if (!uniqueReceivers.has(r.receiver)) {
+      uniqueReceivers.set(r.receiver, r);
+    }
+  }
+
+  // 4️⃣ Send notifications
+  await Promise.all(
+    Array.from(uniqueReceivers.values()).map((r) =>
+      sendNotifications({
+        text: notificationText,
+        receiver: r.receiver,
+        type: r.type,
+        referenceId: result._id.toString(),
+      }),
+    ),
+  );
 
   return result;
 };
@@ -469,39 +487,6 @@ const cancelBookingFromDB = async (
 
   return booking;
 };
-
-// const confirmBookingAfterPaymentFromDB = async (
-//   bookingId: string,
-//   userId: string,
-// ) => {
-//   const booking = await Booking.findById(bookingId);
-
-//   if (!booking || booking.bookingStatus !== BOOKING_STATUS.PENDING) {
-//     throw new ApiError(400, "Invalid booking state");
-//   }
-
-//   //  Ownership validation
-//   if (!booking.userId.equals(userId)) {
-//     throw new ApiError(403, "Unauthorized booking confirmation");
-//   }
-
-//   if (booking.isSelfBooking) {
-//     throw new ApiError(400, "Self booking does not require payment");
-//   }
-
-//   // Re-check availability (race condition safe)
-//   await validateAvailabilityStrict(
-//     booking.carId.toString(),
-//     booking.fromDate,
-//     booking.toDate
-//   );
-
-//   // Confirm
-//   booking.bookingStatus = BOOKING_STATUS.CONFIRMED;
-
-//   await booking.save();
-//   return booking;
-// };
 
 const getAllBookingsFromDB = async (query: any) => {
   const searchTerm = query.search?.toLowerCase() || "";

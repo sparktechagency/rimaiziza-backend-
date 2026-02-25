@@ -12,60 +12,7 @@ import { Transaction } from "./transaction.model";
 import { User } from "../user/user.model";
 import { USER_ROLES } from "../../../enums/user";
 
-// const createBookingPaymentSession = async (bookingId: string, userId: string) => {
-//     const booking = await Booking.findById(bookingId).populate('carId');
-//     if (!booking) throw new Error("Booking not found");
-//     if (booking.bookingStatus !== BOOKING_STATUS.PENDING) throw new Error("Booking not payable");
 
-//     // Include deposit in total amount
-//     const car = booking.carId as any;
-//     if (!car) throw new Error("Car details not found");
-
-//     const totalAmountWithDeposit = booking.totalAmount + (car.depositAmount || 0);
-//     console.log(totalAmountWithDeposit, "totalAmountWithDeposit")
-//     console.log(car, "car")
-
-//     // Calculate dynamic charges
-//     const charges = await getDynamicCharges({ totalAmount: booking.totalAmount });
-
-//     // Create transaction with initial status
-//     const transaction = await Transaction.create({
-//         bookingId: booking._id,
-//         userId,
-//         amount: totalAmountWithDeposit,
-//         type: TRANSACTION_TYPE.BOOKING,
-//         status: TRANSACTION_STATUS.INITIATED,
-//         charges: {
-//             platformFee: charges.platformFee,
-//             hostCommission: charges.hostCommission,
-//             adminCommission: charges.adminCommission,
-//         }
-//     });
-
-//     // Stripe checkout session
-//     const session = await stripe.checkout.sessions.create({
-//         mode: 'payment',
-//         payment_method_types: ['card'],
-//         line_items: [{
-//             price_data: {
-//                 currency: process.env.CURRENCY!,
-//                 product_data: { name: `Booking ${booking._id}` },
-//                 unit_amount: totalAmountWithDeposit * 100,
-//             },
-//             quantity: 1,
-//         }],
-//         metadata: { transactionId: transaction._id.toString(), bookingId: booking._id.toString() },
-//         success_url: `http://10.10.7.41:5005/payment-success`,
-//         cancel_url: `http://10.10.7.41:5005/payment-cancel`,
-//     });
-
-//     transaction.stripeSessionId = session.id;
-//     await transaction.save();
-
-//     console.log(session, "SESSION")
-
-//     return session.url;
-// };
 
 const createBookingPaymentSession = async (
   bookingId: string,

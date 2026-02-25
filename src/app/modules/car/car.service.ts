@@ -9,6 +9,7 @@ import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { generateVehicleId } from "../../../helpers/generateYearBasedId";
 import {
   checkCarAvailabilityByDate,
+  checkIfUserHasPaid,
   getCarCalendar,
   getCarTripCount,
   getCarTripCountMap,
@@ -68,7 +69,7 @@ const getAllCarsFromDB = async (query: any) => {
     .search(["vehicleId", "brand", "model", "licensePlate"])
     .sort()
     .paginate();
-
+  
   const cars = await queryBuilder.modelQuery;
 
   if (!cars.length) {
@@ -128,6 +129,8 @@ const updateCarByIdToDB = async (
     verified: true,
     status: STATUS.ACTIVE,
   });
+
+
 
   if (!user) {
     throw new ApiError(404, "No approved host found by this ID");
@@ -798,22 +801,6 @@ const getNearbyCarsFromDB = async (params: any) => {
     filteredCars = cars.filter((_, index) => availabilityFlags[index]);
   }
 
-  // ৫. Attach isFavorite
-  // if (userId && cars.length > 0) {
-  //     const carIds = cars.map((car) => car._id);
-  //     const favorites = await FavoriteCar.find({
-  //         userId,
-  //         referenceId: { $in: carIds },
-  //     }).select("referenceId");
-
-  //     const favMap = new Map(favorites.map((f) => [f.referenceId.toString(), true]));
-  //     cars.forEach((car) => {
-  //         car.isFavorite = !!favMap.get(car._id.toString());
-  //     });
-  // } else {
-  //     cars.forEach((car) => (car.isFavorite = false));
-  // }
-
   // -------------------- REVIEWS --------------------
   const hostIds = filteredCars
     .map((c) => c.assignedHosts)
@@ -863,6 +850,42 @@ const getNearbyCarsFromDB = async (params: any) => {
       car.reviews = [];
     });
   }
+
+  // ✅ NEW: Bulk check — which cars has this user paid for?
+  let paidCarIds = new Set<string>();
+
+  if (userId && filteredCars.length > 0) {
+    const carIds = filteredCars.map((c) => c._id);
+
+    // Find all paid bookings for this user across these cars
+    const paidBookings = await Booking.find({
+      carId: { $in: carIds },
+      userId: new Types.ObjectId(userId),
+      bookingStatus: {
+        $in: [
+          BOOKING_STATUS.CONFIRMED,
+          BOOKING_STATUS.ONGOING,
+          BOOKING_STATUS.COMPLETED,
+        ],
+      },
+    })
+      .select("carId transactionId isSelfBooking")
+      .populate({ path: "transactionId", select: "status" })
+      .lean();
+
+    for (const booking of paidBookings) {
+      const transaction = booking.transactionId as any;
+      const isPaid = transaction?.status === TRANSACTION_STATUS.SUCCESS;
+      if (isPaid) {
+        paidCarIds.add((booking.carId as any).toString());
+      }
+    }
+  }
+
+  // Attach hasUserPaid to each car
+  filteredCars.forEach((car) => {
+    car.hasUserPaid = paidCarIds.has(car._id.toString()); // ✅
+  });
 
   return {
     cars: filteredCars,
@@ -927,8 +950,12 @@ const getCarByIdForUserFromDB = async (id: string, userId: string) => {
         : 0;
   }
 
+  //  Check if this user has a successful payment for this car
+  const hasUserPaid = await checkIfUserHasPaid(id, userId);
+
   return {
     ...car.toObject(),
+    hasUserPaid,
     trips: trips || 0,
     isAvailable,
     availabilityCalendar,

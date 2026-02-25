@@ -17,6 +17,7 @@ import { ChargesRoutes } from "../modules/charges/charges.route";
 import { BookingRoutes } from "../modules/booking/booking.route";
 import { StripeRoutes } from "../modules/stripe/stripe.route";
 import { TransactionRoutes } from "../modules/transaction/transaction.route";
+import { NotificationRoutes } from "../modules/notification/notification.routes";
 
 const router = express.Router();
 
@@ -102,6 +103,10 @@ const apiRoutes = [
     path: "/transactions",
     route: TransactionRoutes,
   },
+  {
+    path:"/notifications",
+    route:NotificationRoutes
+  }
 ];
 
 apiRoutes.forEach((route) => router.use(route.path, route.route));
