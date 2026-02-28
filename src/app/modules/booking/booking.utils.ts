@@ -4,14 +4,13 @@ import { Car } from "../car/car.model";
 import { generateRequestedHours, getLocalDetails } from "../car/car.utils";
 import { BOOKING_STATUS } from "./booking.interface";
 import { Booking } from "./booking.model";
+import { Charges } from "../charges/charges.model";
 
-export const calculateFirstTimeBookingAmount = (
+export const calculateFirstTimeBookingAmount = async (
   from: Date,
   to: Date,
   car: any,
 ) => {
-  console.log(from, to, car, "---CAR---");
-
   const totalMs = to.getTime() - from.getTime();
 
   const totalHours = Math.ceil(totalMs / (1000 * 60 * 60)); // round up partial hour
@@ -23,30 +22,57 @@ export const calculateFirstTimeBookingAmount = (
   const fullDays = Math.floor(effectiveHours / dailyHours);
   let remainingHours = effectiveHours % dailyHours;
 
-  let amount = fullDays * car.dailyPrice;
+  let baseRentalPrice = fullDays * car.dailyPrice;
 
   // If remaining hours > 12, count it as 1 full day
   if (remainingHours > 0) {
     if (remainingHours > 12) {
-      amount += car.dailyPrice;
+      baseRentalPrice += car.dailyPrice;
     } else {
-      amount += (car.dailyPrice / dailyHours) * remainingHours;
+      baseRentalPrice += (car.dailyPrice / dailyHours) * remainingHours;
     }
   }
 
-  // Add deposit
-  amount += car.depositAmount || 0;
+  // Get charges configuration
+  const charges = await Charges.findOne();
+  if (!charges) {
+    throw new ApiError(404, "Charges configuration not found");
+  }
 
-  console.log(amount, car, "Amount car");
+  const normalize = (percent: number) =>
+    percent > 1 ? percent / 100 : percent;
 
-  return amount;
+  const platformPercent = normalize(charges.platformFee);
+  const hostPercent = normalize(charges.hostCommission);
+  const adminPercent = normalize(charges.adminCommission);
+
+  // Calculate fees based on rental price
+  const platformFee = +(baseRentalPrice * platformPercent).toFixed(2);
+  const hostCommission = +(baseRentalPrice * hostPercent).toFixed(2);
+  const adminCommission = +(
+    baseRentalPrice -
+    platformFee -
+    hostCommission
+  ).toFixed(2);
+
+  // Total amount = Rental Price + Platform Fee + Deposit
+  const totalAmount = baseRentalPrice + platformFee + (car.depositAmount || 0);
+
+  return {
+    totalAmount: Number(totalAmount.toFixed(2)),
+    baseRentalPrice: Number(baseRentalPrice.toFixed(2)),
+    platformFee: Number(platformFee.toFixed(2)),
+    hostCommission: Number(hostCommission.toFixed(2)),
+    adminCommission: Number(adminCommission.toFixed(2)),
+    depositAmount: car.depositAmount || 0,
+  };
 };
 
-export const calculateExtendBookingAmount = (
+export const calculateExtendBookingAmount = async (
   from: Date,
   to: Date,
   car: any,
-): number => {
+): Promise<any> => {
   if (!from || !to) {
     throw new Error("Invalid date provided");
   }
@@ -75,11 +101,39 @@ export const calculateExtendBookingAmount = (
   }
 
   const hourlyRate = car.dailyPrice / 24;
+  const baseExtendPrice = hourlyRate * totalHours;
 
-  const amount = hourlyRate * totalHours;
+  // Get charges configuration
+  const charges = await Charges.findOne();
+  if (!charges) {
+    throw new ApiError(404, "Charges configuration not found");
+  }
 
-  // round to 2 decimal places
-  return Number(amount.toFixed(2));
+  const normalize = (percent: number) =>
+    percent > 1 ? percent / 100 : percent;
+
+  const platformPercent = normalize(charges.platformFee);
+  const hostPercent = normalize(charges.hostCommission);
+  const adminPercent = normalize(charges.adminCommission);
+
+  // Calculate fees for extend
+  const platformFee = +(baseExtendPrice * platformPercent).toFixed(2);
+  const hostCommission = +(baseExtendPrice * hostPercent).toFixed(2);
+  const adminCommission = +(
+    baseExtendPrice -
+    platformFee -
+    hostCommission
+  ).toFixed(2);
+
+  const totalAmount = baseExtendPrice + platformFee;
+
+  return {
+    totalAmount: Number(totalAmount.toFixed(2)),
+    baseExtendPrice: Number(baseExtendPrice.toFixed(2)),
+    platformFee: Number(platformFee.toFixed(2)),
+    hostCommission: Number(hostCommission.toFixed(2)),
+    adminCommission: Number(adminCommission.toFixed(2)),
+  };
 };
 
 export const validateAvailabilityStrictForApproval = async (

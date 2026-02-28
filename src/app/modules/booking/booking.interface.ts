@@ -29,6 +29,10 @@ export interface IBooking {
   fromDate: Date;
   toDate: Date;
   extendedHours?: number; // total hours extended
+  rentalPrice: number;
+  platformFee: number;
+  hostCommission: number;
+  adminCommission: number;
   totalAmount: number;
   bookingStatus: BOOKING_STATUS;
   checkedInAt?: Date;

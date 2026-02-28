@@ -994,6 +994,8 @@ const getCarsByHostFromDB = async (hostId: string) => {
 
   (car as any).isFavorite = !!isBookmarked;
 
+  const availabilityCalendar = await getCarCalendar(car._id.toString());
+
   // -------------------- TRIPS --------------------
   const tripCount = await getCarTripCount(car._id);
   // (car as any).trips = tripCountMap[car._id.toString()] ?? 0;
@@ -1049,7 +1051,10 @@ const getCarsByHostFromDB = async (hostId: string) => {
 
   (car as any).hostTotalEarning = earningResult[0]?.totalEarning ?? 0;
 
-  return car;
+  return {
+    ...car,
+    availabilityCalendar,
+  };
 };
 
 export const CarServices = {

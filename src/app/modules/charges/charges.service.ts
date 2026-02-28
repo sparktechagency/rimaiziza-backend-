@@ -28,7 +28,7 @@ const deleteChargesFromDB = async (id: string) => {
   return result;
 };
 
-export const getDynamicCharges = async ({ totalAmount }: any) => {
+export const getDynamicCharges = async ({ baseAmount }: { baseAmount: number }) => {
   const charges = await getAllChargesFromDB();
 
   if (!charges) {
@@ -49,9 +49,9 @@ export const getDynamicCharges = async ({ totalAmount }: any) => {
     throw new ApiError(400, "Invalid commission configuration");
   }
 
-  const platformFee = +(totalAmount * platformPercent).toFixed(2);
-  const hostCommission = +(totalAmount * hostPercent).toFixed(2);
-  const adminCommission = +(totalAmount - platformFee - hostCommission).toFixed(
+  const platformFee = +(baseAmount * platformPercent).toFixed(2);
+  const hostCommission = +(baseAmount * hostPercent).toFixed(2);
+  const adminCommission = +(baseAmount - platformFee - hostCommission).toFixed(
     2,
   );
 

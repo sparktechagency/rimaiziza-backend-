@@ -34,6 +34,13 @@ router
   );
 
 router
+  .route("/host/self")
+  .get(
+    auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    BookingControllers.getSelfBookingsByHost,
+  );
+
+router
   .route("/host/:bookingId")
   .get(
     auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
@@ -76,12 +83,7 @@ router
 //         BookingControllers.confirmBookingAfterPayment,
 //     );
 
-router
-  .route("/host/self")
-  .get(
-    auth(USER_ROLES.HOST, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-    BookingControllers.getSelfBookingsByHost,
-  );
+
 
 router
   .route("/user/:bookingId")

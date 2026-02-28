@@ -116,14 +116,27 @@ export const handleExtendBookingSuccess = async (session: any) => {
   transaction.stripePaymentIntentId = session.payment_intent;
   await transaction.save();
 
-  // ✅ Update booking time
+  // ✅ Update booking time and amounts
+  const oldToDate = booking.toDate;
   booking.toDate = newToDate;
+
+  // Update cumulative totals in booking
+  const extensionPlatformFee = transaction.charges?.platformFee || 0;
+  const extensionHostCommission = transaction.charges?.hostCommission || 0;
+  const extensionAdminCommission = transaction.charges?.adminCommission || 0;
+  const extensionRentalPrice = transaction.amount - extensionPlatformFee;
+
+  (booking as any).rentalPrice = ((booking as any).rentalPrice || 0) + extensionRentalPrice;
+  (booking as any).platformFee = ((booking as any).platformFee || 0) + extensionPlatformFee;
+  (booking as any).hostCommission = ((booking as any).hostCommission || 0) + extensionHostCommission;
+  (booking as any).adminCommission = ((booking as any).adminCommission || 0) + extensionAdminCommission;
+  booking.totalAmount = (booking.totalAmount || 0) + transaction.amount;
 
   // Optional: store extend history
   booking.extendHistory = [
     ...(booking.extendHistory || []),
     {
-      previousToDate: booking.toDate,
+      previousToDate: oldToDate,
       newToDate,
       transactionId: transaction._id,
       extendedAt: new Date(),
@@ -233,7 +246,7 @@ export const markBookingOngoing = async (bookingId: string) => {
       type: NOTIFICATION_TYPE.USER,
       referenceId: booking._id.toString(),
     });
-
+    
     await sendNotifications({
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.hostId.toString(),
@@ -283,23 +296,21 @@ export const markBookingCompleted = async (bookingId: string) => {
     );
 
     // ------------------ HOST COMMISSION TRANSFER ------------------
-    const transaction = booking.transactionId as any;
     const host = booking.hostId as any;
+    const totalHostCommission = (booking as any).hostCommission || 0;
 
     if (
-      transaction &&
       host?.stripeConnectedAccountId &&
-      transaction.charges?.hostCommission
+      totalHostCommission > 0
     ) {
       try {
         await stripe.transfers.create({
-          amount: Math.round(transaction.charges.hostCommission * 100),
+          amount: Math.round(totalHostCommission * 100),
           currency: process.env.CURRENCY!,
           destination: host.stripeConnectedAccountId,
-          description: `Host commission for booking ${booking._id}`,
+          description: `Total Host commission for booking ${booking._id} (including extensions)`,
           metadata: {
             bookingId: booking._id.toString(),
-            transactionId: transaction._id.toString(),
           },
         });
 

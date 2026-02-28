@@ -56,8 +56,9 @@ const createBookingPaymentSession = async (
   const totalAmount = booking.totalAmount;
 
   //  dynamic charges calculation
+  // We use rentalPrice (base rental price) to calculate commissions
   const charges = await getDynamicCharges({
-    totalAmount: booking.totalAmount,
+    baseAmount: (booking as any).rentalPrice,
   });
 
   //  create transaction
@@ -142,13 +143,18 @@ const createExtendBookingPaymentSession = async (
 
   // calculate extended amount
   const car = booking.carId as any;
-  const extendedAmount = calculateExtendBookingAmount(
+  const extensionCalculation = await calculateExtendBookingAmount(
     booking.toDate,
     newToDate,
     car,
   );
 
-  console.log(extendedAmount, "EXTENDED AMOUNT");
+  const extendedAmount = extensionCalculation.totalAmount;
+
+  // dynamic charges calculation
+  const charges = await getDynamicCharges({
+    baseAmount: extensionCalculation.baseExtendPrice,
+  });
 
   // create transaction
   const transaction = await Transaction.create({
@@ -159,6 +165,11 @@ const createExtendBookingPaymentSession = async (
     type: TRANSACTION_TYPE.EXTEND,
     status: TRANSACTION_STATUS.INITIATED,
     extendToDate: newToDate,
+    charges: {
+      platformFee: charges.platformFee,
+      hostCommission: charges.hostCommission,
+      adminCommission: charges.adminCommission,
+    },
   });
 
   // create Stripe session

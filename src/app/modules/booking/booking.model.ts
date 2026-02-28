@@ -79,6 +79,24 @@ const bookingSchema = new Schema<IBooking>(
       type: Number,
       default: 0,
     },
+    rentalPrice: {
+      type: Number,
+      required: true,
+    },
+    platformFee: {
+      type: Number,
+      required: true,
+    },
+    hostCommission: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    adminCommission: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     totalAmount: {
       type: Number,
       required: true,

@@ -39,7 +39,7 @@ const createBookingToDB = async (payload: any, userId: string) => {
     ? BOOKING_STATUS.CONFIRMED
     : BOOKING_STATUS.REQUESTED;
 
-  const totalAmount = calculateFirstTimeBookingAmount(
+  const calculation = await calculateFirstTimeBookingAmount(
     new Date(payload.fromDate),
     new Date(payload.toDate),
     car,
@@ -49,7 +49,11 @@ const createBookingToDB = async (payload: any, userId: string) => {
     ...payload,
     hostId: car.assignedHosts,
     bookingStatus,
-    totalAmount,
+    rentalPrice: calculation.baseRentalPrice,
+    platformFee: calculation.platformFee,
+    hostCommission: calculation.hostCommission,
+    adminCommission: calculation.adminCommission,
+    totalAmount: calculation.totalAmount,
     isSelfBooking,
   });
 
@@ -386,11 +390,9 @@ const cancelBookingFromDB = async (
       ) || 1;
 
     const paidAmount = transaction.amount;
-    const dailyPrice = car.dailyPrice;
-
-    // Get dynamic charges
-    const { platformFee, hostCommission, adminCommission } =
-      await getDynamicCharges({ totalAmount: paidAmount });
+    const rentalPrice = (booking as any).rentalPrice;
+    const platformFee = (booking as any).platformFee;
+    const totalRental = rentalPrice + platformFee;
 
     const diffMs = fromDate.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
@@ -404,16 +406,17 @@ const cancelBookingFromDB = async (
         Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)),
         totalDays,
       );
-      chargeAmount =
-        daysUsed * dailyPrice + platformFee + hostCommission + adminCommission;
+      // Charge for portion of rental price and platform fee used
+      chargeAmount = (daysUsed / totalDays) * totalRental;
     }
     // Cancellation < 72 hours before pickup
     else if (diffHours < 72) {
-      chargeAmount = dailyPrice;
+      // Charge 1 day's worth of total rental price
+      chargeAmount = totalRental / totalDays;
     }
 
     if (chargeAmount < 0) chargeAmount = 0;
-    if (chargeAmount > paidAmount) chargeAmount = paidAmount;
+    if (chargeAmount > totalRental) chargeAmount = totalRental; // Should not exceed total rental
 
     const refundAmount = paidAmount - chargeAmount;
 
