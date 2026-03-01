@@ -5,7 +5,7 @@ import stripeService from "./stripe.service";
 
 const createStripeAccount = catchAsync(async (req, res) => {
   const user = req.user;
-
+  
   const stripeAccount = await stripeService.createConnectedAccount(user.email);
 
   await User.findByIdAndUpdate(user.id, {
@@ -25,7 +25,7 @@ const createStripeAccount = catchAsync(async (req, res) => {
     success: true,
     statusCode: 200,
     message: "Stripe account created successfully",
-    data: onboardingLink,
+    data: { link: onboardingLink },
   });
 });
 

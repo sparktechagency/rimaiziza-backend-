@@ -190,8 +190,20 @@ const getBulkReviewSummary = async (
   return map;
 };
 
+const checkIfAlreadyReviewed = async (
+  reviewById: string,
+  reviewForId: string,
+) => {
+  const isExist = await Review.exists({
+    reviewById: new Types.ObjectId(reviewById),
+    reviewForId: new Types.ObjectId(reviewForId),
+  });
+  return !!isExist;
+};
+
 export const ReviewServices = {
   createReview,
   getReviewSummary,
   getBulkReviewSummary,
+  checkIfAlreadyReviewed,
 };

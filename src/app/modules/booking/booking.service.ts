@@ -17,6 +17,7 @@ import { getDynamicCharges } from "../charges/charges.service";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { User } from "../user/user.model";
+import { ReviewServices } from "../review/review.service";
 
 const createBookingToDB = async (payload: any, userId: string) => {
   await validateAvailabilityStrict(
@@ -233,7 +234,12 @@ const getHostBookingByIdFromDB = async (bookingId: string, hostId: string) => {
     throw new ApiError(404, "Booking not found");
   }
 
-  return booking;
+  const isReviewed = await ReviewServices.checkIfAlreadyReviewed(
+    hostId,
+    (booking.userId as any)._id.toString(),
+  );
+
+  return { ...booking, isReviewed };
 };
 
 const getUserBookingByIdFromDB = async (bookingId: string, userId: string) => {
@@ -257,7 +263,12 @@ const getUserBookingByIdFromDB = async (bookingId: string, userId: string) => {
     throw new ApiError(404, "Booking not found");
   }
 
-  return booking;
+  const isReviewed = await ReviewServices.checkIfAlreadyReviewed(
+    userId,
+    (booking.hostId as any)._id.toString(),
+  );
+
+  return { ...booking, isReviewed };
 };
 
 const approveBookingByHostFromDB = async (
