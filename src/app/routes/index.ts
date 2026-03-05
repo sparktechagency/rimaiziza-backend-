@@ -11,7 +11,7 @@ import { CarRoutes } from "../modules/car/car.routes";
 import { MediaRoutes } from "../modules/media/media.route";
 import { SupportRoutes } from "../modules/support/support.route";
 import { AnalyticsRoutes } from "../modules/analytics/analytics.route";
-import { HostDashboardRoutes } from "../modules/hostDashboard/hostDashboard.route";
+// import { HostDashboardRoutes } from "../modules/hostDashboard/hostDashboard.route";
 import { BannerRoutes } from "../modules/banner/banner.route";
 import { ChargesRoutes } from "../modules/charges/charges.route";
 import { BookingRoutes } from "../modules/booking/booking.route";
@@ -79,10 +79,10 @@ const apiRoutes = [
     path: "/analytics",
     route: AnalyticsRoutes,
   },
-  {
-    path: "/host-dashboard",
-    route: HostDashboardRoutes,
-  },
+  // {
+  //   path: "/host-dashboard",
+  //   route: HostDashboardRoutes,
+  // },
   {
     path: "/banners",
     route: BannerRoutes,
