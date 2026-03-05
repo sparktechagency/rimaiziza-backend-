@@ -6,16 +6,16 @@ import { TransactionServices } from "./transaction.service";
 const createBookingPaymentSession = catchAsync(async (req, res) => {
   const { id: userId } = req.user as any;
   const { bookingId } = req.params;
-  console.log(bookingId, "BOOKING ID");
   const paymentUrl = await TransactionServices.createBookingPaymentSession(
     bookingId,
     userId,
   );
+
   sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Payment session created successfully",
-    data: paymentUrl,
+    data: { link: paymentUrl },
   });
 });
 
@@ -35,7 +35,7 @@ const createExtendBookingPaymentController = catchAsync(async (req, res) => {
     success: true,
     statusCode: 200,
     message: "Extend booking payment session created successfully",
-    data: sessionUrl,
+    data: { link: sessionUrl },
   });
 });
 
@@ -46,6 +46,7 @@ const getTransactionsController = catchAsync(async (req, res) => {
     userId,
     status as TRANSACTION_STATUS,
   );
+
   sendResponse(res, {
     success: true,
     statusCode: 200,
@@ -53,6 +54,7 @@ const getTransactionsController = catchAsync(async (req, res) => {
     data: transactions,
   });
 });
+
 
 export const TransactionControllers = {
   createBookingPaymentSession,

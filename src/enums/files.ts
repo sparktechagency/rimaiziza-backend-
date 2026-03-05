@@ -1,5 +1,6 @@
 export enum FOLDER_NAMES {
   IMAGE = "image",
+  COVER_IMAGE = "coverImage",
   SEATING_PLAN = "seatingPlan",
   BUSINESSPROFILEIMAGE = "businessProfileImage",
   GALLERY = "gallery",

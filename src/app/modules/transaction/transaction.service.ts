@@ -55,6 +55,10 @@ const createBookingPaymentSession = async (
 
   const totalAmount = booking.totalAmount;
 
+  /*
+  1. 
+  */
+
   //  dynamic charges calculation
   // We use rentalPrice (base rental price) to calculate commissions
   const charges = await getDynamicCharges({
@@ -96,13 +100,13 @@ const createBookingPaymentSession = async (
       transactionId: transaction._id.toString(),
       bookingId: booking._id.toString(),
     },
-    success_url: `${process.env.CLIENT_URL}/payment-success`,
-    cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,
+    success_url: `http://10.10.7.41:5005/success`,
+    cancel_url: `http://10.10.7.41:5005/fail`,
   });
 
   transaction.stripeSessionId = session.id;
   await transaction.save();
-
+  
   return session.url;
 };
 
@@ -192,14 +196,14 @@ const createExtendBookingPaymentSession = async (
       originalBookingId: booking._id.toString(),
       extendToDate: newToDate.toISOString(),
     },
-    success_url: `http://10.10.7.41:5005/extend-payment-success`,
-    cancel_url: `http://10.10.7.41:5005/extend-payment-cancel`,
+    success_url: `http://10.10.7.41:5005/api/v1/bookings/success`,
+    cancel_url: `http://10.10.7.41:5005/api/v1/bookings/fail`,
   });
 
   transaction.stripeSessionId = session.id;
   await transaction.save();
 
-  console.log(session, "SESSIOn");
+  console.log(session, "SESSION");
 
   return session.url;
 };

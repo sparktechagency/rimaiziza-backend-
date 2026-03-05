@@ -1,22 +1,30 @@
 import { StatusCodes } from "http-status-codes";
 import { Banner } from "./banner.model";
 import unlinkFile from "../../../shared/unlinkFile";
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 import { TBanner } from "./banner.interface";
 import ApiError from "../../../errors/ApiErrors";
 
 const createBannerToDB = async (payload: TBanner): Promise<TBanner> => {
+  // If the new banner is set to be active, deactivate all other banners first.
+  if (payload.status === true) {
+    await Banner.updateMany({}, { $set: { status: false } });
+  }
+
   const createBanner: any = await Banner.create(payload);
   if (!createBanner) {
-    unlinkFile(payload.image);
-    throw new ApiError(400, "Failed to created banner");
+    // Safely unlink file only if path exists
+    if (payload.image) {
+      unlinkFile(payload.image);
+    }
+    throw new ApiError(400, "Failed to create banner");
   }
 
   return createBanner;
 };
 
-const getBannerFromDB = async (): Promise<TBanner[]> => {
-  return await Banner.find({ status: true });
+const getBannerFromDB = async (): Promise<TBanner | null> => {
+  return await Banner.findOne({ status: true });
 };
 
 const getAllBannerFromDB = async (): Promise<TBanner[]> => {
@@ -25,19 +33,29 @@ const getAllBannerFromDB = async (): Promise<TBanner[]> => {
 
 const updateBannerToDB = async (id: string, payload: TBanner) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new ApiError(StatusCodes.NOT_ACCEPTABLE, "Invalid ");
+    throw new ApiError(StatusCodes.NOT_ACCEPTABLE, "Invalid ID");
   }
-  // console.log(payload, "Payload");
+
+  // If the banner is being activated, deactivate all others first.
+  if (payload.status === true) {
+    await Banner.updateMany({ _id: { $ne: id } }, { $set: { status: false } });
+  }
 
   const isBannerExist: any = await Banner.findById(id);
 
-  if (payload.image && isBannerExist?.image) {
-    unlinkFile(isBannerExist?.image);
+  if (!isBannerExist) {
+    throw new ApiError(404, "Banner not found");
   }
 
-  const banner: any = await Banner.findOneAndUpdate({ _id: id }, payload, {
+  // If a new image is uploaded, delete the old one.
+  if (payload.image && isBannerExist.image) {
+    unlinkFile(isBannerExist.image);
+  }
+
+  const banner: any = await Banner.findByIdAndUpdate(id, payload, {
     new: true,
   });
+
   return banner;
 };
 

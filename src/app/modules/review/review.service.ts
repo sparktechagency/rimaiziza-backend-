@@ -5,6 +5,14 @@ import { Review } from "./review.model";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 
+/**
+1. April,May - n8n course 
+2. June, July, August - Workflow + Backend + Frontend + Integration
+3. September, October - PostgreSQL
+4. November, December - All Revise (React,Next.js,Redux,Error Handing,Auth etc)
+5. January - Job Switch Planing + DevOps Course (4 Months [Jan,Feb,Mar,Apr])
+*/
+
 // Create review (dual: host <-> user)
 const createReview = async (payload: IReview, reviewerId: string) => {
   const { reviewForId, ratingValue, feedback, reviewType } = payload;
@@ -91,14 +99,14 @@ const getReviewSummary = async (
     createdAt: r.createdAt,
     fromUser: r.reviewById
       ? {
-          _id: r.reviewById._id,
-          name: r.reviewById.name,
-          role: r.reviewById.role,
-          email: r.reviewById.email,
-          phone: r.reviewById.phone,
-          profileImage: r.reviewById.profileImage,
-          location: r.reviewById.location,
-        }
+        _id: r.reviewById._id,
+        name: r.reviewById.name,
+        role: r.reviewById.role,
+        email: r.reviewById.email,
+        phone: r.reviewById.phone,
+        profileImage: r.reviewById.profileImage,
+        location: r.reviewById.location,
+      }
       : null,
   }));
 
@@ -201,9 +209,25 @@ const checkIfAlreadyReviewed = async (
   return !!isExist;
 };
 
+const getBulkReviewStatus = async (
+  reviewById: string,
+  targetIds: string[],
+) => {
+  const reviews = await Review.find({
+    reviewById: new Types.ObjectId(reviewById),
+    reviewForId: { $in: targetIds.map((id) => new Types.ObjectId(id)) },
+  }).select("reviewForId");
+
+  const reviewedSet = new Set(reviews.map((r) => r.reviewForId.toString()));
+  return reviewedSet;
+};
+
 export const ReviewServices = {
   createReview,
   getReviewSummary,
   getBulkReviewSummary,
   checkIfAlreadyReviewed,
+  getBulkReviewStatus,
 };
+
+

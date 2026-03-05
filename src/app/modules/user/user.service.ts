@@ -641,6 +641,10 @@ const updateProfileToDB = async (
     unlinkFile(isExistUser.profileImage);
   }
 
+  if (payload.coverImage && isExistUser.coverImage) {
+    unlinkFile(isExistUser.coverImage);
+  }
+
   const updateDoc = await User.findOneAndUpdate({ _id: id }, payload, {
     new: true,
   });
@@ -833,6 +837,8 @@ const deleteProfileFromDB = async (id: string, password: string) => {
 
   return result;
 };
+
+
 
 export const UserService = {
   createUserToDB,

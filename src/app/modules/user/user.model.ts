@@ -28,6 +28,11 @@ const userSchema = new Schema<IUser, UserModal>(
       required: false,
       default: "",
     },
+    coverImage: {
+      type: String,
+      required: false,
+      default: "",
+    },
     membershipId: {
       type: String,
       required: false,

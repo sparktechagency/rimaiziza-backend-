@@ -6,6 +6,7 @@ export type IUser = {
   role: USER_ROLES;
   email: string;
   profileImage?: string;
+  coverImage?: string;
   password?: string;
   verified: boolean;
   membershipId?: string;

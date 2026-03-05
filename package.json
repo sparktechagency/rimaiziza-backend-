@@ -38,6 +38,7 @@
     "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.5",
+    "ejs": "^4.0.1",
     "express": "^4.19.2",
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.1",

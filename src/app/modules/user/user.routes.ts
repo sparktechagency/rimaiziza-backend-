@@ -80,7 +80,12 @@ router
     parseAllFilesData({
       fieldName: FOLDER_NAMES.PROFILE_IMAGE,
       forceSingle: true,
-    }),
+    },
+    {
+      fieldName: FOLDER_NAMES.COVER_IMAGE,
+      forceSingle: true,
+    },
+    ),
     UserController.updateProfile,
   );
 

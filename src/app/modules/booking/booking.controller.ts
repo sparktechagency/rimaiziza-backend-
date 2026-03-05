@@ -143,6 +143,16 @@ const getSelfBookingsByHost = catchAsync(async (req, res) => {
   });
 });
 
+const paymentSuccess = catchAsync(async (req, res) => {
+     // Render success page or redirect to frontend success page
+     res.render('success');
+});
+ 
+const paymentFail = catchAsync(async (req, res) => {
+     // Render cancel page or redirect to frontend cancel page
+     res.render('fail');
+});
+
 export const BookingControllers = {
   createBookingToDB,
   getHostBookings,
@@ -154,4 +164,6 @@ export const BookingControllers = {
   // confirmBookingAfterPayment,
   getAllBookings,
   getSelfBookingsByHost,
+  paymentSuccess,
+  paymentFail,
 };

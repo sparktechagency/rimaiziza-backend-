@@ -13,7 +13,6 @@ import {
   calculateFirstTimeBookingAmount,
   validateAvailabilityStrictForApproval,
 } from "./booking.utils";
-import { getDynamicCharges } from "../charges/charges.service";
 import { sendNotifications } from "../../../helpers/notificationsHelper";
 import { NOTIFICATION_TYPE } from "../notification/notification.constant";
 import { User } from "../user/user.model";
@@ -147,6 +146,14 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
     Booking.countDocuments(filter),
   ]);
 
+  const targetIds = data.map((b: any) => b.userId?._id?.toString()).filter(Boolean);
+  const reviewedSet = await ReviewServices.getBulkReviewStatus(hostId, targetIds);
+
+  const dataWithReviewStatus = data.map((b: any) => ({
+    ...b,
+    isReviewed: reviewedSet.has(b.userId?._id?.toString()),
+  }));
+
   return {
     meta: {
       page: Number(page),
@@ -154,7 +161,7 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
       total,
       totalPage: Math.ceil(total / Number(limit)),
     },
-    data,
+    data: dataWithReviewStatus,
   };
 };
 
@@ -199,6 +206,14 @@ const getUserBookingsFromDB = async (userId: string, query: any) => {
     Booking.countDocuments(filter),
   ]);
 
+  const targetIds = data.map((b: any) => b.hostId?._id?.toString()).filter(Boolean);
+  const reviewedSet = await ReviewServices.getBulkReviewStatus(userId, targetIds);
+
+  const dataWithReviewStatus = data.map((b: any) => ({
+    ...b,
+    isReviewed: reviewedSet.has(b.hostId?._id?.toString()),
+  }));
+
   return {
     meta: {
       page: Number(page),
@@ -206,7 +221,7 @@ const getUserBookingsFromDB = async (userId: string, query: any) => {
       total,
       totalPage: Math.ceil(total / Number(limit)),
     },
-    data,
+    data: dataWithReviewStatus,
   };
 };
 

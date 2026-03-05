@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Failed</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Base Styles ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Montserrat", sans-serif;
+      background: linear-gradient(135deg, #fde0dc, #fce4ec);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ===== Glass Card ===== */
+    .card {
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 25px;
+      padding: 3rem 2.5rem;
+      text-align: center;
+      width: 90%;
+      max-width: 450px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      animation: fadeUp 0.8s ease forwards;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ===== Fail Icon ===== */
+    .failmark {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e53935, #b71c1c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 2rem;
+      position: relative;
+      animation: popIn 0.5s ease forwards, shake 0.6s ease 0.5s;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    .failmark svg {
+      width: 60px;
+      height: 60px;
+      stroke: #fff;
+      stroke-width: 4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: draw 0.6s ease forwards;
+    }
+
+    /* ===== Text ===== */
+    h1 {
+      font-size: 1.8rem;
+      color: #b71c1c;
+      margin-bottom: 0.8rem;
+      font-weight: 700;
+    }
+
+    p {
+      font-size: 1rem;
+      color: #555;
+      opacity: 0.9;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    /* ===== Button ===== */
+    .btn {
+      background: linear-gradient(135deg, #ef5350, #c62828);
+      color: #fff;
+      text-decoration: none;
+      padding: 1rem 2.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      display: inline-block;
+      box-shadow: 0 6px 20px rgba(198, 40, 40, 0.4);
+    }
+
+    .btn:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(198, 40, 40, 0.5);
+    }
+
+    /* ===== Animations ===== */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes draw {
+      0% { stroke-dasharray: 0 100; }
+      100% { stroke-dasharray: 100 0; }
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      50% { transform: translateX(8px); }
+      75% { transform: translateX(-8px); }
+      100% { transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="failmark">
+      <svg viewBox="0 0 24 24">
+        <line x1="6" y1="6" x2="18" y2="18" />
+        <line x1="6" y1="18" x2="18" y2="6" />
+      </svg>
+    </div>
+    <h1>Payment Failed!</h1>
+    <p>Oops! Something went wrong. Your payment could not be processed. Please try again or contact support.</p>
+    <a href="https://google.com" class="btn">Try Again</a>
+  </div>
+
+</body>
+</html>

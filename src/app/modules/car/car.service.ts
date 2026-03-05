@@ -983,7 +983,7 @@ const getCarsByHostFromDB = async (hostId: string) => {
   }).lean();
 
   if (!car) {
-    throw new ApiError(404, "No active car found for this host");
+    throw new ApiError(200, "No active car found for this host");
   }
 
   // -------------------- FAVORITE --------------------

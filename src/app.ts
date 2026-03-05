@@ -10,8 +10,8 @@ import { handleStripeWebhook } from "./helpers/webhooks/handleStripeWebhook";
 
 const app: Application = express();
 
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+app.set('views', path.join(__dirname, '..', 'views'));
+app.set('view engine', 'ejs');
 
 app.post(
   "/stripe/webhook",

@@ -17,7 +17,6 @@ const bannerSchema = new Schema<TBanner>(
     },
     status: {
       type: Boolean,
-      default: true,
     },
   },
   {
