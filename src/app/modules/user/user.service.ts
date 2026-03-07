@@ -603,9 +603,7 @@ const getUserProfileFromDB = async (user: JwtPayload): Promise<any> => {
 
     const hostCar = await Car.findOne({ assignedHosts: id }, { _id: 1 });
 
-    if (!hostCar) throw new ApiError(404, "Host does not have any car");
-
-    const trips = await getCarTripCount(hostCar?._id);
+    const trips = hostCar ? await getCarTripCount(hostCar._id) : 0;
 
     // Review summary
     const reviewSummary = await ReviewServices.getReviewSummary(
