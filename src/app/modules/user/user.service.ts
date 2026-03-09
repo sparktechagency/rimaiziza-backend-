@@ -836,8 +836,6 @@ const deleteProfileFromDB = async (id: string, password: string) => {
   return result;
 };
 
-
-
 export const UserService = {
   createUserToDB,
   getAdminFromDB,

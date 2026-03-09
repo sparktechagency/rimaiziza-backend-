@@ -69,7 +69,7 @@ const getAllCarsFromDB = async (query: any) => {
     .search(["vehicleId", "brand", "model", "licensePlate"])
     .sort()
     .paginate();
-  
+
   const cars = await queryBuilder.modelQuery;
 
   if (!cars.length) {
@@ -129,8 +129,6 @@ const updateCarByIdToDB = async (
     verified: true,
     status: STATUS.ACTIVE,
   });
-
-
 
   if (!user) {
     throw new ApiError(404, "No approved host found by this ID");

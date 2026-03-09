@@ -99,14 +99,14 @@ const getReviewSummary = async (
     createdAt: r.createdAt,
     fromUser: r.reviewById
       ? {
-        _id: r.reviewById._id,
-        name: r.reviewById.name,
-        role: r.reviewById.role,
-        email: r.reviewById.email,
-        phone: r.reviewById.phone,
-        profileImage: r.reviewById.profileImage,
-        location: r.reviewById.location,
-      }
+          _id: r.reviewById._id,
+          name: r.reviewById.name,
+          role: r.reviewById.role,
+          email: r.reviewById.email,
+          phone: r.reviewById.phone,
+          profileImage: r.reviewById.profileImage,
+          location: r.reviewById.location,
+        }
       : null,
   }));
 
@@ -209,10 +209,7 @@ const checkIfAlreadyReviewed = async (
   return !!isExist;
 };
 
-const getBulkReviewStatus = async (
-  reviewById: string,
-  targetIds: string[],
-) => {
+const getBulkReviewStatus = async (reviewById: string, targetIds: string[]) => {
   const reviews = await Review.find({
     reviewById: new Types.ObjectId(reviewById),
     reviewForId: { $in: targetIds.map((id) => new Types.ObjectId(id)) },
@@ -229,5 +226,3 @@ export const ReviewServices = {
   checkIfAlreadyReviewed,
   getBulkReviewStatus,
 };
-
-

@@ -28,7 +28,11 @@ const deleteChargesFromDB = async (id: string) => {
   return result;
 };
 
-export const getDynamicCharges = async ({ baseAmount }: { baseAmount: number }) => {
+export const getDynamicCharges = async ({
+  baseAmount,
+}: {
+  baseAmount: number;
+}) => {
   const charges = await getAllChargesFromDB();
 
   if (!charges) {

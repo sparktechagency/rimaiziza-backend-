@@ -83,8 +83,6 @@ router
 //         BookingControllers.confirmBookingAfterPayment,
 //     );
 
-
-
 router
   .route("/user/:bookingId")
   .get(
@@ -92,7 +90,7 @@ router
     BookingControllers.getUserBookingById,
   );
 
-router.get('/success', BookingControllers.paymentSuccess);
-router.get('/fail', BookingControllers.paymentFail);
+router.get("/success", BookingControllers.paymentSuccess);
+router.get("/fail", BookingControllers.paymentFail);
 
 export const BookingRoutes = router;

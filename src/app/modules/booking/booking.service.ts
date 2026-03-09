@@ -72,7 +72,9 @@ const createBookingToDB = async (payload: any, userId: string) => {
   ];
 
   // 2️⃣ Add admin if exists
-  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select("_id");
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+    "_id",
+  );
   if (admin) {
     receivers.push({
       receiver: admin._id.toString(),
@@ -81,7 +83,7 @@ const createBookingToDB = async (payload: any, userId: string) => {
   }
 
   // 3️⃣ Deduplicate by receiver
-  const uniqueReceivers = new Map<string, typeof receivers[0]>();
+  const uniqueReceivers = new Map<string, (typeof receivers)[0]>();
 
   for (const r of receivers) {
     if (!uniqueReceivers.has(r.receiver)) {
@@ -146,8 +148,13 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
     Booking.countDocuments(filter),
   ]);
 
-  const targetIds = data.map((b: any) => b.userId?._id?.toString()).filter(Boolean);
-  const reviewedSet = await ReviewServices.getBulkReviewStatus(hostId, targetIds);
+  const targetIds = data
+    .map((b: any) => b.userId?._id?.toString())
+    .filter(Boolean);
+  const reviewedSet = await ReviewServices.getBulkReviewStatus(
+    hostId,
+    targetIds,
+  );
 
   const dataWithReviewStatus = data.map((b: any) => ({
     ...b,
@@ -206,8 +213,13 @@ const getUserBookingsFromDB = async (userId: string, query: any) => {
     Booking.countDocuments(filter),
   ]);
 
-  const targetIds = data.map((b: any) => b.hostId?._id?.toString()).filter(Boolean);
-  const reviewedSet = await ReviewServices.getBulkReviewStatus(userId, targetIds);
+  const targetIds = data
+    .map((b: any) => b.hostId?._id?.toString())
+    .filter(Boolean);
+  const reviewedSet = await ReviewServices.getBulkReviewStatus(
+    userId,
+    targetIds,
+  );
 
   const dataWithReviewStatus = data.map((b: any) => ({
     ...b,

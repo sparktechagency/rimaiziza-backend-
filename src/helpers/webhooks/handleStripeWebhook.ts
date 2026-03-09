@@ -126,10 +126,14 @@ export const handleExtendBookingSuccess = async (session: any) => {
   const extensionAdminCommission = transaction.charges?.adminCommission || 0;
   const extensionRentalPrice = transaction.amount - extensionPlatformFee;
 
-  (booking as any).rentalPrice = ((booking as any).rentalPrice || 0) + extensionRentalPrice;
-  (booking as any).platformFee = ((booking as any).platformFee || 0) + extensionPlatformFee;
-  (booking as any).hostCommission = ((booking as any).hostCommission || 0) + extensionHostCommission;
-  (booking as any).adminCommission = ((booking as any).adminCommission || 0) + extensionAdminCommission;
+  (booking as any).rentalPrice =
+    ((booking as any).rentalPrice || 0) + extensionRentalPrice;
+  (booking as any).platformFee =
+    ((booking as any).platformFee || 0) + extensionPlatformFee;
+  (booking as any).hostCommission =
+    ((booking as any).hostCommission || 0) + extensionHostCommission;
+  (booking as any).adminCommission =
+    ((booking as any).adminCommission || 0) + extensionAdminCommission;
   booking.totalAmount = (booking.totalAmount || 0) + transaction.amount;
 
   // Optional: store extend history
@@ -157,7 +161,6 @@ const handleAccountUpdated = async (account: any) => {
     account.requirements?.currently_due?.length === 0
   ) {
     console.log("Account ready for onboarding:", account.id, "update start");
-
 
     const host = await User.findOneAndUpdate(
       { stripeConnectedAccountId: account.id },
@@ -249,7 +252,7 @@ export const markBookingOngoing = async (bookingId: string) => {
       type: NOTIFICATION_TYPE.USER,
       referenceId: booking._id.toString(),
     });
-    
+
     await sendNotifications({
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.hostId.toString(),
@@ -302,10 +305,7 @@ export const markBookingCompleted = async (bookingId: string) => {
     const host = booking.hostId as any;
     const totalHostCommission = (booking as any).hostCommission || 0;
 
-    if (
-      host?.stripeConnectedAccountId &&
-      totalHostCommission > 0
-    ) {
+    if (host?.stripeConnectedAccountId && totalHostCommission > 0) {
       try {
         await stripe.transfers.create({
           amount: Math.round(totalHostCommission * 100),

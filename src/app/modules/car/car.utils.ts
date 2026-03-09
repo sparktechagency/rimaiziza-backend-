@@ -385,7 +385,6 @@ export const checkIfUserHasPaid = async (
     })
     .lean();
 
-
   if (!paidBooking) return false;
 
   // Self bookings don't have a transaction but are considered "paid" (confirmed by host)

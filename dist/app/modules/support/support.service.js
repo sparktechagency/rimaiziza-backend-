@@ -1,16 +1,42 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+var __awaiter =
+  (this && this.__awaiter) ||
+  function (thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P
+        ? value
+        : new P(function (resolve) {
+            resolve(value);
+          });
+    }
     return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done
+          ? resolve(result.value)
+          : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+  };
+var __importDefault =
+  (this && this.__importDefault) ||
+  function (mod) {
+    return mod && mod.__esModule ? mod : { default: mod };
+  };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SupportServices = void 0;
 const mongoose_1 = require("mongoose");
@@ -36,8 +62,8 @@ const queryBuilder_1 = __importDefault(require("../../builder/queryBuilder"));
 //   background-color:#ffffff;box-shadow:0 4px 12px rgba(0,0,0,0.06)">
 //     <!-- Header -->
 //     <div style="background-color:#009e99;padding:25px 20px;color:white;text-align:center">
-//       <img 
-//         src="https://res.cloudinary.com/dphkhbunv/image/upload/v1764838083/E4E36157-7B0A-426F-A544-52A5091A7DEB_eueode.jpg" 
+//       <img
+//         src="https://res.cloudinary.com/dphkhbunv/image/upload/v1764838083/E4E36157-7B0A-426F-A544-52A5091A7DEB_eueode.jpg"
 //         alt="GO CONNECTE Logo"
 //         style="width:90px;height:auto;margin-bottom:10px;border-radius:8px;"
 //       />
@@ -64,8 +90,8 @@ const queryBuilder_1 = __importDefault(require("../../builder/queryBuilder"));
 //         </div>
 //       </div>
 //       <div style="text-align:center;margin-top:35px">
-//         <a 
-//           href="mailto:${payload.email}" 
+//         <a
+//           href="mailto:${payload.email}"
 //           style="background-color:#009e99;color:#ffffff;padding:14px 24px;
 //           border-radius:6px;text-decoration:none;font-size:16px;display:inline-block;
 //           font-weight:600;letter-spacing:0.3px"
@@ -85,17 +111,19 @@ const queryBuilder_1 = __importDefault(require("../../builder/queryBuilder"));
 //   await emailHelper.sendEmail(emailPayload);
 //   return supportEntry;
 // };
-const support = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
+const support = (id, payload) =>
+  __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.isExistUserById(id);
     if (!user) {
-        throw new ApiErrors_1.default(404, "No user is found in the database");
+      throw new ApiErrors_1.default(404, "No user is found in the database");
     }
     payload.userId = new mongoose_1.Types.ObjectId(id);
     const supportEntry = yield support_model_1.Support.create(payload);
     const emailPayload = {
-        to: config_1.default.support_receiver_email || "support@gogreenmatrix.com",
-        subject: `GoGreenMatrix Support Request: ${payload.subject}`,
-        html: `
+      to:
+        config_1.default.support_receiver_email || "support@gogreenmatrix.com",
+      subject: `GoGreenMatrix Support Request: ${payload.subject}`,
+      html: `
 <body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;background:#ffffff;">
     <tr>
@@ -196,48 +224,57 @@ const support = (id, payload) => __awaiter(void 0, void 0, void 0, function* () 
     };
     yield emailHelper_1.emailHelper.sendEmail(emailPayload);
     return supportEntry;
-});
-const getAllSupportsFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
+  });
+const getAllSupportsFromDB = (query) =>
+  __awaiter(void 0, void 0, void 0, function* () {
     const baseQuery = support_model_1.Support.find().populate({
-        path: "userId",
-        select: "_id firstName lastName email phone role profileImage",
+      path: "userId",
+      select: "_id firstName lastName email phone role profileImage",
     });
     const queryBuilder = new queryBuilder_1.default(baseQuery, query)
-        .search(["name email subject userId"])
-        .sort()
-        .fields()
-        .filter()
-        .paginate();
+      .search(["name email subject userId"])
+      .sort()
+      .fields()
+      .filter()
+      .paginate();
     const supports = yield queryBuilder.modelQuery;
     const meta = yield queryBuilder.countTotal();
     if (!supports || supports.length === 0) {
-        throw new ApiErrors_1.default(404, "Supports data are not found in the database");
+      throw new ApiErrors_1.default(
+        404,
+        "Supports data are not found in the database",
+      );
     }
     return {
-        data: supports,
-        meta,
+      data: supports,
+      meta,
     };
-});
-const getSupportByIdFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
+  });
+const getSupportByIdFromDB = (id) =>
+  __awaiter(void 0, void 0, void 0, function* () {
     const support = yield support_model_1.Support.findById(id).populate({
-        path: "userId",
-        select: "firstName lastName role profileImage email _id phone",
+      path: "userId",
+      select: "firstName lastName role profileImage email _id phone",
     });
     if (!support) {
-        throw new ApiErrors_1.default(404, "No support is found by this ID");
+      throw new ApiErrors_1.default(404, "No support is found by this ID");
     }
     return support;
-});
-const deleteSupportByIdFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
+  });
+const deleteSupportByIdFromDB = (id) =>
+  __awaiter(void 0, void 0, void 0, function* () {
     const support = yield support_model_1.Support.findByIdAndDelete(id);
     if (!support) {
-        throw new ApiErrors_1.default(400, "Failed to delete this support by this ID");
+      throw new ApiErrors_1.default(
+        400,
+        "Failed to delete this support by this ID",
+      );
     }
     return support;
-});
+  });
 exports.SupportServices = {
-    support,
-    getAllSupportsFromDB,
-    getSupportByIdFromDB,
-    deleteSupportByIdFromDB,
+  support,
+  getAllSupportsFromDB,
+  getSupportByIdFromDB,
+  deleteSupportByIdFromDB,
 };

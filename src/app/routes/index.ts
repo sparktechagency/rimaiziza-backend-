@@ -104,9 +104,9 @@ const apiRoutes = [
     route: TransactionRoutes,
   },
   {
-    path:"/notifications",
-    route:NotificationRoutes
-  }
+    path: "/notifications",
+    route: NotificationRoutes,
+  },
 ];
 
 apiRoutes.forEach((route) => router.use(route.path, route.route));

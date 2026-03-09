@@ -55,7 +55,6 @@ const getTransactionsController = catchAsync(async (req, res) => {
   });
 });
 
-
 export const TransactionControllers = {
   createBookingPaymentSession,
   createExtendBookingPaymentController,

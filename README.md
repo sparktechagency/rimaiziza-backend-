@@ -1,11 +1,12 @@
 1. payment korar age contact information dekhte parbe na, payment korar por contact information visible hobe - aita frontend theke handle hobe
 2. validation korte hobe jeno 24 hours ar niche booking kora na jai min 24 hours book korte hobe
 
+New Adjustments
 
-New Issues
-1. payment korar age cancel ar kono option asbe na, payment korar por e kebol cancel korte parbe
+1. host k manual payment kora hobe, tai r connected account ar kono dorkar nai
 
 <!-- NOTIFICATIONS -->
+
 1. Car - Add, Update, Delete -->ADMIN (DONE)
 2. New Signup --> ADMIN (DONE)
 3. Host - Add,Delete -->ADMIN (DONE)

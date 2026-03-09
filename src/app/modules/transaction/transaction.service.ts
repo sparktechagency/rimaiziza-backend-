@@ -12,8 +12,6 @@ import { Transaction } from "./transaction.model";
 import { User } from "../user/user.model";
 import { USER_ROLES } from "../../../enums/user";
 
-
-
 const createBookingPaymentSession = async (
   bookingId: string,
   userId: string,
@@ -104,11 +102,11 @@ const createBookingPaymentSession = async (
     cancel_url: `https://api.gogreenmatrix.my/api/v1/bookings/fail`,
   });
 
-
+  console.log();
 
   transaction.stripeSessionId = session.id;
   await transaction.save();
-  
+
   return session.url;
 };
 
