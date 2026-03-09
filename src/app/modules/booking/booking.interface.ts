@@ -35,6 +35,13 @@ export interface IBooking {
   adminCommission: number;
   totalAmount: number;
   bookingStatus: BOOKING_STATUS;
+  requestedAt: Date;
+  approvedAt?: Date;
+  paidAt?: Date;
+  confirmedAt?: Date;
+  ongoingAt?: Date;
+  completedAt?: Date;
+  cancelledAt?: Date;
   checkedInAt?: Date;
   checkedOutAt?: Date;
   extendHistory?: {

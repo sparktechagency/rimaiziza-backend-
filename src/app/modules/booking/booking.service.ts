@@ -55,6 +55,11 @@ const createBookingToDB = async (payload: any, userId: string) => {
     adminCommission: calculation.adminCommission,
     totalAmount: calculation.totalAmount,
     isSelfBooking,
+    requestedAt: new Date(),
+    ...(isSelfBooking && {
+      approvedAt: new Date(),
+      confirmedAt: new Date(),
+    }),
   });
 
   const notificationText = `Booking ${result.bookingId} status is ${result.bookingStatus}`;
@@ -328,6 +333,7 @@ const approveBookingByHostFromDB = async (
   );
 
   booking.bookingStatus = BOOKING_STATUS.PENDING;
+  booking.approvedAt = new Date();
   await booking.save();
 
   //  Send notification to the user, host, and admin
@@ -492,6 +498,7 @@ const cancelBookingFromDB = async (
   if (isHostActor) booking.isCanceledByHost = true;
 
   booking.bookingStatus = BOOKING_STATUS.CANCELLED;
+  booking.cancelledAt = new Date();
   await booking.save();
 
   // Update vehicle availability

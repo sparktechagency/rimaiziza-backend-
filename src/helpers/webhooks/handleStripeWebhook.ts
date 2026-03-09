@@ -28,7 +28,12 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
   // Atomic booking update
   const booking = await Booking.findOneAndUpdate(
     { _id: transaction.bookingId, bookingStatus: BOOKING_STATUS.PENDING },
-    { bookingStatus: BOOKING_STATUS.CONFIRMED, transactionId: transaction._id },
+    {
+      bookingStatus: BOOKING_STATUS.CONFIRMED,
+      transactionId: transaction._id,
+      paidAt: new Date(),
+      confirmedAt: new Date(),
+    },
     { new: true },
   );
 
@@ -242,6 +247,7 @@ export const markBookingOngoing = async (bookingId: string) => {
   ) {
     booking.bookingStatus = BOOKING_STATUS.ONGOING;
     booking.checkedInAt = now;
+    booking.ongoingAt = now;
     await booking.save();
     console.log(`Booking ${booking._id} marked as ONGOING`);
 
@@ -289,6 +295,7 @@ export const markBookingCompleted = async (bookingId: string) => {
   ) {
     booking.bookingStatus = BOOKING_STATUS.COMPLETED;
     booking.checkedOutAt = now;
+    booking.completedAt = now;
 
     // Schedule deposit refund 3 days later
     booking.depositRefundableAt = new Date(

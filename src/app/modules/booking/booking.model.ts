@@ -106,11 +106,42 @@ const bookingSchema = new Schema<IBooking>(
       enum: Object.values(BOOKING_STATUS),
       default: BOOKING_STATUS.REQUESTED,
     },
+    requestedAt: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
+    approvedAt: {
+      type: Date,
+      required: false,
+    },
+    paidAt: {
+      type: Date,
+      required: false,
+    },
+    confirmedAt: {
+      type: Date,
+      required: false,
+    },
+    ongoingAt: {
+      type: Date,
+      required: false,
+    },
+    completedAt: {
+      type: Date,
+      required: false,
+    },
+    cancelledAt: {
+      type: Date,
+      required: false,
+    },
     checkedInAt: {
       type: Date,
+      required: false,
     },
     checkedOutAt: {
       type: Date,
+      required: false,
     },
     extendHistory: {
       type: [
