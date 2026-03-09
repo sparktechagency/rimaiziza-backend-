@@ -301,52 +301,14 @@ export const markBookingCompleted = async (bookingId: string) => {
       `Booking ${booking._id} marked COMPLETED, deposit refund scheduled`,
     );
 
-    // ------------------ HOST COMMISSION TRANSFER ------------------
-    const host = booking.hostId as any;
+    // ------------------ HOST COMMISSION (MANUAL PAYMENT) ------------------
+    // Previously, we transferred host commission automatically via Stripe.
+    // Now, all funds stay in the admin account, and the host is paid manually.
+    // The calculation remains in the booking record for reference.
     const totalHostCommission = (booking as any).hostCommission || 0;
-
-    if (host?.stripeConnectedAccountId && totalHostCommission > 0) {
-      try {
-        await stripe.transfers.create({
-          amount: Math.round(totalHostCommission * 100),
-          currency: process.env.CURRENCY!,
-          destination: host.stripeConnectedAccountId,
-          description: `Total Host commission for booking ${booking._id} (including extensions)`,
-          metadata: {
-            bookingId: booking._id.toString(),
-          },
-        });
-
-        console.log(
-          `✅ Host commission transferred for booking ${booking._id}`,
-        );
-
-        // send notification status host and admin
-        await sendNotifications({
-          text: `Payout sent for booking ${booking.bookingId}`,
-          receiver: booking.hostId.toString(),
-          type: NOTIFICATION_TYPE.HOST,
-          referenceId: booking._id.toString(),
-        });
-
-        const admin = await User.findOne({
-          role: USER_ROLES.SUPER_ADMIN,
-        }).select("_id");
-        if (admin) {
-          await sendNotifications({
-            text: `Payout sent for booking ${booking.bookingId}`,
-            receiver: admin._id.toString(),
-            type: NOTIFICATION_TYPE.ADMIN,
-            referenceId: booking._id.toString(),
-          });
-        }
-      } catch (err: any) {
-        console.error(
-          `Failed to transfer host commission for booking ${booking._id}:`,
-          err.message,
-        );
-      }
-    }
+    console.log(
+      `ℹ Host commission for booking ${booking._id}: ${totalHostCommission} (To be paid manually)`,
+    );
   }
 };
 
