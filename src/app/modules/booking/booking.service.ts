@@ -697,6 +697,17 @@ import { User } from "../user/user.model";
 import { ReviewServices } from "../review/review.service";
 
 const createBookingToDB = async (payload: any, userId: string) => {
+  const from = new Date(payload.fromDate);
+  const to = new Date(payload.toDate);
+
+  // Minimum 24 hours (1 day) validation
+  const diffMs = to.getTime() - from.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  if (diffHours < 24) {
+    throw new ApiError(400, "Minimum booking duration must be 24 hours (1 day)");
+  }
+
   await validateAvailabilityStrict(
     payload.carId,
     payload.fromDate,
