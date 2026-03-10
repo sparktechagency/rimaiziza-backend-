@@ -63,6 +63,10 @@ const bookingSchema = new Schema<IBooking>(
       type: Boolean,
       default: false,
     },
+    isCanceledByAdmin: {
+      type: Boolean,
+      default: false,
+    },
     isSelfBooking: {
       type: Boolean,
       default: false,

@@ -338,7 +338,7 @@ export const refundDepositIfEligible = async (bookingId: string) => {
 
   try {
     await stripe.refunds.create({
-      payment_intent: transaction.stripePaymentIntentId,
+      payment_intent: transaction.stripePaymentIntentId as string,
       amount: Math.round(car.depositAmount * 100), // Stripe expects cents
     });
 

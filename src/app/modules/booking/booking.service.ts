@@ -464,9 +464,9 @@
 
 //     const refundAmount = paidAmount - chargeAmount;
 
-//     if (refundAmount > 0) {
+//     if (refundAmount > 0 && transaction?.stripePaymentIntentId) {
 //       await stripe.refunds.create({
-//         payment_intent: transaction.stripePaymentIntentId,
+//         payment_intent: transaction.stripePaymentIntentId as string,
 //         amount: Math.round(refundAmount * 100),
 //       });
 //       transaction.status = TRANSACTION_STATUS.REFUNDED;
@@ -1281,22 +1281,192 @@ const approveBookingByHostFromDB = async (
   return booking;
 };
 
-const cancelBookingFromDB = async (
+// const cancelBookingFromDB = async (
+//   bookingId: string,
+//   actorId: string,
+//   actorRole: USER_ROLES,
+// ) => {
+//   if (!Types.ObjectId.isValid(bookingId)) {
+//     throw new ApiError(400, "Invalid booking id");
+//   }
+
+//   const booking = await Booking.findById(bookingId)
+//     .populate("carId")
+//     .populate("transactionId");
+
+//   if (!booking) {
+//     throw new ApiError(404, "Booking not found");
+//   }
+
+//   if (booking.bookingStatus === BOOKING_STATUS.CANCELLED) {
+//     throw new ApiError(400, "Booking already cancelled");
+//   }
+
+//   if (booking.bookingStatus === BOOKING_STATUS.COMPLETED) {
+//     throw new ApiError(400, "Completed booking cannot be cancelled");
+//   }
+
+//   const isUserActor = actorRole === USER_ROLES.USER;
+//   const isHostActor = actorRole === USER_ROLES.HOST;
+//   const isAdminActor =
+//     actorRole === USER_ROLES.ADMIN || actorRole === USER_ROLES.SUPER_ADMIN;
+
+//   // Role-based permission check
+//   if (isUserActor) {
+//     if (!booking.userId.equals(actorId)) {
+//       throw new ApiError(403, "You are not allowed to cancel this booking");
+//     }
+//     if (booking.isSelfBooking) {
+//       throw new ApiError(403, "Self bookings cannot be cancelled by customer");
+//     }
+//   } else if (isHostActor) {
+//     if (!booking.hostId.equals(actorId) || !booking.isSelfBooking) {
+//       throw new ApiError(403, "Hosts can cancel only their own self bookings");
+//     }
+//   } else if (!isAdminActor) {
+//     throw new ApiError(403, "You are not allowed to cancel this booking");
+//   }
+
+//   const now = new Date();
+//   const transaction = booking.transactionId
+//     ? await Transaction.findById(booking.transactionId)
+//     : null;
+
+//   if (
+//     transaction &&
+//     transaction.status === TRANSACTION_STATUS.SUCCESS &&
+//     transaction.stripePaymentIntentId
+//   ) {
+//     const car = booking.carId as any;
+
+//     if (!car) throw new ApiError(400, "Car details not found");
+
+//     const fromDate = new Date(booking.fromDate);
+//     const toDate = new Date(booking.toDate);
+//     const totalDays =
+//       Math.ceil(
+//         (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24),
+//       ) || 1;
+
+//     const paidAmount = transaction.amount;
+//     const rentalPrice = (booking as any).rentalPrice;
+//     const platformFee = (booking as any).platformFee;
+//     const totalRental = rentalPrice + platformFee;
+
+//     const diffMs = fromDate.getTime() - now.getTime();
+//     const diffHours = diffMs / (1000 * 60 * 60);
+
+//     let chargeAmount = 0;
+
+//     // Cancellation after pickup
+//     if (now >= fromDate) {
+//       // Multi-day prorated charge
+//       const daysUsed = Math.min(
+//         Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)),
+//         totalDays,
+//       );
+//       // Charge for portion of rental price and platform fee used
+//       chargeAmount = (daysUsed / totalDays) * totalRental;
+//     }
+//     // Cancellation < 72 hours before pickup
+//     else if (diffHours < 72) {
+//       // Charge 1 day's worth of total rental price
+//       chargeAmount = totalRental / totalDays;
+//     }
+
+//     if (chargeAmount < 0) chargeAmount = 0;
+//     if (chargeAmount > totalRental) chargeAmount = totalRental; // Should not exceed total rental
+
+//     const refundAmount = paidAmount - chargeAmount;
+
+//     if (refundAmount > 0 && transaction?.stripePaymentIntentId) {
+//       await stripe.refunds.create({
+//         payment_intent: transaction.stripePaymentIntentId as string,
+//         amount: Math.round(refundAmount * 100),
+//       });
+//       transaction.status = TRANSACTION_STATUS.REFUNDED;
+//       await transaction.save();
+
+//       // Send refund notification to user and admin
+//       await sendNotifications({
+//         text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
+//         receiver: booking.userId.toString(),
+//         type: NOTIFICATION_TYPE.USER,
+//         referenceId: booking._id.toString(),
+//       });
+
+//       const admin = await User.findOne({
+//         role: USER_ROLES.SUPER_ADMIN,
+//       }).select("_id");
+//       if (admin) {
+//         await sendNotifications({
+//           text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
+//           receiver: admin._id.toString(),
+//           type: NOTIFICATION_TYPE.ADMIN,
+//           referenceId: booking._id.toString(),
+//         });
+//       }
+//     }
+//   }
+
+//   if (isUserActor) booking.isCanceledByUser = true;
+//   if (isHostActor) booking.isCanceledByHost = true;
+
+//   booking.bookingStatus = BOOKING_STATUS.CANCELLED;
+//   booking.cancelledAt = new Date();
+//   await booking.save();
+
+//   // Update vehicle availability
+//   if (booking.carId) {
+//     await Car.findByIdAndUpdate(booking.carId._id, { isAvailable: true });
+//   }
+
+//   // Send notification to the user, host, and admin
+//   await sendNotifications({
+//     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+//     receiver: booking.userId.toString(),
+//     type: NOTIFICATION_TYPE.USER,
+//     referenceId: booking._id.toString(),
+//   });
+
+//   await sendNotifications({
+//     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+//     receiver: booking.hostId.toString(),
+//     type: NOTIFICATION_TYPE.HOST,
+//     referenceId: booking._id.toString(),
+//   });
+
+//   const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
+//     "_id",
+//   );
+//   if (admin) {
+//     await sendNotifications({
+//       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+//       receiver: admin._id.toString(),
+//       type: NOTIFICATION_TYPE.ADMIN,
+//       referenceId: booking._id.toString(),
+//     });
+//   }
+
+//   return booking;
+// };
+
+ const cancelBookingFromDB = async (
   bookingId: string,
   actorId: string,
   actorRole: USER_ROLES,
 ) => {
+  // Validate Booking ID
   if (!Types.ObjectId.isValid(bookingId)) {
     throw new ApiError(400, "Invalid booking id");
   }
 
+  // Fetch booking with related info
   const booking = await Booking.findById(bookingId)
     .populate("carId")
     .populate("transactionId");
 
-  if (!booking) {
-    throw new ApiError(404, "Booking not found");
-  }
+  if (!booking) throw new ApiError(404, "Booking not found");
 
   if (booking.bookingStatus === BOOKING_STATUS.CANCELLED) {
     throw new ApiError(400, "Booking already cancelled");
@@ -1306,24 +1476,17 @@ const cancelBookingFromDB = async (
     throw new ApiError(400, "Completed booking cannot be cancelled");
   }
 
+  //  Role-based permission
   const isUserActor = actorRole === USER_ROLES.USER;
   const isHostActor = actorRole === USER_ROLES.HOST;
   const isAdminActor =
     actorRole === USER_ROLES.ADMIN || actorRole === USER_ROLES.SUPER_ADMIN;
 
-  // Role-based permission check
-  if (isUserActor) {
-    if (!booking.userId.equals(actorId)) {
-      throw new ApiError(403, "You are not allowed to cancel this booking");
-    }
-    if (booking.isSelfBooking) {
-      throw new ApiError(403, "Self bookings cannot be cancelled by customer");
-    }
-  } else if (isHostActor) {
-    if (!booking.hostId.equals(actorId) || !booking.isSelfBooking) {
-      throw new ApiError(403, "Hosts can cancel only their own self bookings");
-    }
-  } else if (!isAdminActor) {
+  if (isUserActor && !booking.userId.equals(actorId)) {
+    throw new ApiError(403, "You are not allowed to cancel this booking");
+  } else if (isHostActor && !booking.hostId.equals(actorId)) {
+    throw new ApiError(403, "Hosts can cancel only their own bookings");
+  } else if (!isUserActor && !isHostActor && !isAdminActor) {
     throw new ApiError(403, "You are not allowed to cancel this booking");
   }
 
@@ -1332,21 +1495,15 @@ const cancelBookingFromDB = async (
     ? await Transaction.findById(booking.transactionId)
     : null;
 
-  if (
-    transaction &&
-    transaction.status === TRANSACTION_STATUS.SUCCESS &&
-    transaction.stripePaymentIntentId
-  ) {
+  //  Refund logic (same for all actors)
+  if (transaction && transaction.status === TRANSACTION_STATUS.SUCCESS) {
     const car = booking.carId as any;
-
     if (!car) throw new ApiError(400, "Car details not found");
 
     const fromDate = new Date(booking.fromDate);
     const toDate = new Date(booking.toDate);
     const totalDays =
-      Math.ceil(
-        (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24),
-      ) || 1;
+      Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
 
     const paidAmount = transaction.amount;
     const rentalPrice = (booking as any).rentalPrice;
@@ -1358,36 +1515,32 @@ const cancelBookingFromDB = async (
 
     let chargeAmount = 0;
 
-    // Cancellation after pickup
+    // Cancellation after pickup → prorated
     if (now >= fromDate) {
-      // Multi-day prorated charge
       const daysUsed = Math.min(
         Math.ceil((now.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)),
         totalDays,
       );
-      // Charge for portion of rental price and platform fee used
       chargeAmount = (daysUsed / totalDays) * totalRental;
     }
-    // Cancellation < 72 hours before pickup
+    // Cancellation < 72 hours before pickup → 1 day charge
     else if (diffHours < 72) {
-      // Charge 1 day's worth of total rental price
       chargeAmount = totalRental / totalDays;
     }
 
-    if (chargeAmount < 0) chargeAmount = 0;
-    if (chargeAmount > totalRental) chargeAmount = totalRental; // Should not exceed total rental
-
+    // Sanity check
+    chargeAmount = Math.max(0, Math.min(chargeAmount, totalRental));
     const refundAmount = paidAmount - chargeAmount;
 
-    if (refundAmount > 0) {
+    if (refundAmount > 0 && transaction.stripePaymentIntentId) {
       await stripe.refunds.create({
-        payment_intent: transaction.stripePaymentIntentId,
+        payment_intent: transaction.stripePaymentIntentId as string,
         amount: Math.round(refundAmount * 100),
       });
       transaction.status = TRANSACTION_STATUS.REFUNDED;
       await transaction.save();
 
-      // Send refund notification to user and admin
+      // Notification: User
       await sendNotifications({
         text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
         receiver: booking.userId.toString(),
@@ -1395,9 +1548,8 @@ const cancelBookingFromDB = async (
         referenceId: booking._id.toString(),
       });
 
-      const admin = await User.findOne({
-        role: USER_ROLES.SUPER_ADMIN,
-      }).select("_id");
+      // Notification: Admin
+      const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select("_id");
       if (admin) {
         await sendNotifications({
           text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
@@ -1409,9 +1561,12 @@ const cancelBookingFromDB = async (
     }
   }
 
+  //  Mark actor who cancelled
   if (isUserActor) booking.isCanceledByUser = true;
   if (isHostActor) booking.isCanceledByHost = true;
+  if (isAdminActor) booking.isCanceledByAdmin = true;
 
+  //  Update booking status
   booking.bookingStatus = BOOKING_STATUS.CANCELLED;
   booking.cancelledAt = new Date();
   await booking.save();
@@ -1421,7 +1576,7 @@ const cancelBookingFromDB = async (
     await Car.findByIdAndUpdate(booking.carId._id, { isAvailable: true });
   }
 
-  // Send notification to the user, host, and admin
+  //  Send status notifications
   await sendNotifications({
     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
     receiver: booking.userId.toString(),
@@ -1436,9 +1591,7 @@ const cancelBookingFromDB = async (
     referenceId: booking._id.toString(),
   });
 
-  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select(
-    "_id",
-  );
+  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).select("_id");
   if (admin) {
     await sendNotifications({
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
@@ -1450,6 +1603,7 @@ const cancelBookingFromDB = async (
 
   return booking;
 };
+
 
 const getAllBookingsFromDB = async (query: any) => {
   const searchTerm = query.search?.toLowerCase() || "";

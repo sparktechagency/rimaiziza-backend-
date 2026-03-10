@@ -355,6 +355,8 @@ const googleLoginService = async (payload: {
 }) => {
   const { token, deviceToken } = payload
 
+  console.log(token,deviceToken,"Token and device token")
+
   if (!token) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Firebase ID token is required')
   }

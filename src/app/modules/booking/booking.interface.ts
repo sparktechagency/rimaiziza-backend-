@@ -25,6 +25,7 @@ export interface IBooking {
   depositRefundableAt?: Date;
   isCanceledByUser?: boolean;
   isCanceledByHost?: boolean;
+  isCanceledByAdmin?: boolean;
   isSelfBooking?: boolean;
   fromDate: Date;
   toDate: Date;
