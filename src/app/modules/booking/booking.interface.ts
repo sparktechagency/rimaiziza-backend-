@@ -7,6 +7,7 @@ export enum BOOKING_STATUS {
   ONGOING = "ONGOING",
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
+  EXPIRED = "EXPIRED",
 }
 
 export interface IBooking {

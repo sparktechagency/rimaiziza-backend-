@@ -44,7 +44,7 @@ const baseLayout = (content) => `
   </body>
 `;
 const createAccount = (values) => {
-  const content = `
+    const content = `
     <h2 style="margin-top:0;color:${TEXT_COLOR};">
       Welcome, ${values.name}
     </h2>
@@ -77,14 +77,14 @@ const createAccount = (values) => {
       If you did not create this account, please ignore this email.
     </p>
   `;
-  return {
-    to: values.email,
-    subject: "GoGreenMatrix – Verify Your Account",
-    html: baseLayout(content),
-  };
+    return {
+        to: values.email,
+        subject: "GoGreenMatrix – Verify Your Account",
+        html: baseLayout(content),
+    };
 };
 const resetPassword = (values) => {
-  const content = `
+    const content = `
     <h2 style="margin-top:0;color:${TEXT_COLOR};">
       Password Reset Request
     </h2>
@@ -117,13 +117,13 @@ const resetPassword = (values) => {
       If you did not request a password reset, you can safely ignore this email.
     </p>
   `;
-  return {
-    to: values.email,
-    subject: "GoGreenMatrix – Password Reset Code",
-    html: baseLayout(content),
-  };
+    return {
+        to: values.email,
+        subject: "GoGreenMatrix – Password Reset Code",
+        html: baseLayout(content),
+    };
 };
 exports.emailTemplate = {
-  createAccount,
-  resetPassword,
+    createAccount,
+    resetPassword,
 };

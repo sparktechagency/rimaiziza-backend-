@@ -433,4 +433,54 @@ export const bookingStatusCronJob = async () => {
       );
     }
   }
+
+  // 5️⃣ Mark REQUESTED and PENDING bookings as EXPIRED if fromDate <= now
+  const expiredBookings = await Booking.find({
+    bookingStatus: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING] },
+    fromDate: { $lte: now },
+  });
+
+  if (expiredBookings.length > 0) {
+    console.log(`Found ${expiredBookings.length} expired bookings to process.`);
+  }
+
+  for (const booking of expiredBookings) {
+    try {
+      booking.bookingStatus = BOOKING_STATUS.EXPIRED;
+      await booking.save();
+      console.log(`Booking ${booking._id} marked as EXPIRED`);
+
+      // send notification status user, host and admin
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: booking.userId.toString(),
+        type: NOTIFICATION_TYPE.USER,
+        referenceId: booking._id.toString(),
+      });
+
+      await sendNotifications({
+        text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+        receiver: booking.hostId.toString(),
+        type: NOTIFICATION_TYPE.HOST,
+        referenceId: booking._id.toString(),
+      });
+
+      const admin = await User.findOne({
+        role: USER_ROLES.SUPER_ADMIN,
+      }).select("_id");
+      if (admin) {
+        await sendNotifications({
+          text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
+          receiver: admin._id.toString(),
+          type: NOTIFICATION_TYPE.ADMIN,
+          referenceId: booking._id.toString(),
+        });
+      }
+    } catch (err: any) {
+      console.warn(
+        `Failed to mark booking ${booking._id} as EXPIRED:`,
+        err.message,
+      );
+    }
+  }
 };

@@ -804,6 +804,7 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
   if (!Types.ObjectId.isValid(hostId)) {
     throw new ApiError(400, "Invalid host id");
   }
+  console.log(hostId,"HOST ID")
 
   const { status, page = 1, limit = 20 } = query;
   const skip = (Number(page) - 1) * Number(limit);
@@ -814,6 +815,8 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
     hostId: new Types.ObjectId(hostId),
   };
 
+  console.log(status,"STATUS")
+
   // 2️⃣ Status Filter
   if (status) {
     const statuses = status
@@ -823,6 +826,8 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
         Object.values(BOOKING_STATUS).includes(s as BOOKING_STATUS),
       );
 
+      console.log(statuses,"STATUSES")
+
     if (!statuses.length) {
       throw new ApiError(400, "Invalid booking status filter");
     }
@@ -830,78 +835,9 @@ const getHostBookingsFromDB = async (hostId: string, query: any) => {
     match.bookingStatus = { $in: statuses };
   }
 
-  // 3️⃣ Expiry & Overlapping Logic for REQUESTED and PENDING bookings
+  // 3️⃣ Expiry & Overlapping Logic for REQUESTED and PENDING bookings (Removed hiding logic)
   const pipeline: any[] = [
     { $match: match },
-    // Hide REQUESTED or PENDING bookings where fromDate is in the past
-    {
-      $match: {
-        $or: [
-          {
-            bookingStatus: {
-              $nin: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING],
-            },
-          },
-          {
-            bookingStatus: {
-              $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING],
-            },
-            fromDate: { $gte: now },
-          },
-        ],
-      },
-    },
-    // Hide REQUESTED or PENDING bookings if the user has an overlapping CONFIRMED/ONGOING booking elsewhere
-    {
-      $lookup: {
-        from: "bookings",
-        let: {
-          uId: "$userId",
-          fDate: "$fromDate",
-          tDate: "$toDate",
-          bId: "$_id",
-        },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$userId", "$$uId"] },
-                  { $ne: ["$_id", "$$bId"] },
-                  {
-                    $in: [
-                      "$bookingStatus",
-                      [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING],
-                    ],
-                  },
-                  { $lt: ["$fromDate", "$$tDate"] },
-                  { $gt: ["$toDate", "$$fDate"] },
-                ],
-              },
-            },
-          },
-          { $limit: 1 },
-        ],
-        as: "overlapping",
-      },
-    },
-    {
-      $match: {
-        $or: [
-          {
-            bookingStatus: {
-              $nin: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING],
-            },
-          },
-          {
-            bookingStatus: {
-              $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING],
-            },
-            overlapping: { $size: 0 },
-          },
-        ],
-      },
-    },
   ];
 
   // 4️⃣ Final Aggregation with Pagination and Populate
@@ -1024,10 +960,7 @@ const getUserBookingsFromDB = async (userId: string, query: any) => {
 
   const dataWithReviewStatus = await Promise.all(
     data.map(async (b: any) => {
-      const isExpired =
-        [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING].includes(
-          b.bookingStatus,
-        ) && new Date(b.fromDate) < new Date();
+      const isExpired = b.bookingStatus === BOOKING_STATUS.EXPIRED;
 
       let isOverlapping = false;
       if (
@@ -1095,33 +1028,6 @@ const getHostBookingByIdFromDB = async (bookingId: string, hostId: string) => {
     throw new ApiError(404, "Booking not found");
   }
 
-  // Expiry & Overlapping Logic for REQUESTED and PENDING bookings (consistent with list view)
-  if (
-    [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING].includes(
-      booking.bookingStatus,
-    )
-  ) {
-    // 1️⃣ Check expiry
-    if (new Date(booking.fromDate) < now) {
-      throw new ApiError(404, "Booking not found");
-    }
-
-    // 2️⃣ Check overlapping confirmed/ongoing bookings for the same user
-    const overlapping = await Booking.findOne({
-      userId: (booking.userId as any)._id,
-      _id: { $ne: booking._id },
-      bookingStatus: {
-        $in: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ONGOING],
-      },
-      fromDate: { $lt: booking.toDate },
-      toDate: { $gt: booking.fromDate },
-    });
-
-    if (overlapping) {
-      throw new ApiError(404, "Booking not found");
-    }
-  }
-
   console.log(booking, "Booking");
 
   const isReviewed = await ReviewServices.checkIfAlreadyReviewed(
@@ -1158,10 +1064,7 @@ const getUserBookingByIdFromDB = async (bookingId: string, userId: string) => {
     (booking.hostId as any)._id.toString(),
   );
 
-  const isExpired =
-    [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING].includes(
-      booking.bookingStatus,
-    ) && new Date(booking.fromDate) < new Date();
+  const isExpired = booking.bookingStatus === BOOKING_STATUS.EXPIRED;
 
   let isOverlapping = false;
   if (
@@ -1213,7 +1116,6 @@ const approveBookingByHostFromDB = async (
 
   const now = new Date();
 
-  // 1️⃣ Check expiry
   if (new Date(booking.fromDate) < now) {
     throw new ApiError(400, "Booking request has expired");
   }
