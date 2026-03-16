@@ -47,6 +47,7 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
   // Send notification to the user, host, and admin
   if (booking) {
     await sendNotifications({
+      title: "Booking Confirmed",
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.userId.toString(),
       type: NOTIFICATION_TYPE.USER,
@@ -55,6 +56,7 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
     });
 
     await sendNotifications({
+      title: "Booking Confirmed",
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.hostId.toString(),
       type: NOTIFICATION_TYPE.HOST,
@@ -67,6 +69,7 @@ export const handleCheckoutSessionCompleted = async (session: any) => {
     }).select("_id");
     if (admin) {
       await sendNotifications({
+        title: "Booking Confirmed",
         text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
         receiver: admin._id.toString(),
         type: NOTIFICATION_TYPE.ADMIN,
@@ -259,6 +262,7 @@ export const markBookingOngoing = async (bookingId: string) => {
 
     // send notification status user, host and admin
     await sendNotifications({
+      title: "Booking Ongoing",
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.userId.toString(),
       type: NOTIFICATION_TYPE.USER,
@@ -266,6 +270,7 @@ export const markBookingOngoing = async (bookingId: string) => {
     });
 
     await sendNotifications({
+      title: "Booking Ongoing",
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: booking.hostId.toString(),
       type: NOTIFICATION_TYPE.HOST,
@@ -277,6 +282,7 @@ export const markBookingOngoing = async (bookingId: string) => {
     }).select("_id");
     if (admin) {
       await sendNotifications({
+        title: "Booking Ongoing",
         text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
         receiver: admin._id.toString(),
         type: NOTIFICATION_TYPE.ADMIN,
@@ -456,6 +462,7 @@ export const bookingStatusCronJob = async () => {
 
       // send notification status user, host and admin
       await sendNotifications({
+        title: "Booking Expired",
         text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
         receiver: booking.userId.toString(),
         type: NOTIFICATION_TYPE.USER,
@@ -463,6 +470,7 @@ export const bookingStatusCronJob = async () => {
       });
 
       await sendNotifications({
+        title: "Booking Expired",
         text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
         receiver: booking.hostId.toString(),
         type: NOTIFICATION_TYPE.HOST,
@@ -474,6 +482,7 @@ export const bookingStatusCronJob = async () => {
       }).select("_id");
       if (admin) {
         await sendNotifications({
+          title: "Booking Expired",
           text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
           receiver: admin._id.toString(),
           type: NOTIFICATION_TYPE.ADMIN,

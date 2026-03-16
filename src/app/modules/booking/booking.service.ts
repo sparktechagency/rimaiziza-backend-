@@ -116,6 +116,7 @@ const createBookingToDB = async (payload: any, userId: string) => {
   await Promise.all(
     Array.from(uniqueReceivers.values()).map((r) =>
       sendNotifications({
+        title: "Booking Notification",
         text: notificationText,
         receiver: r.receiver,
         sender: userId,
@@ -446,6 +447,7 @@ const approveBookingByHostFromDB = async (
 
   //  Send notification to the user, host, and admin
   await sendNotifications({
+    title: "Booking Approved",
     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
     receiver: booking.userId.toString(),
     sender: hostId,
@@ -455,6 +457,7 @@ const approveBookingByHostFromDB = async (
   });
 
   await sendNotifications({
+    title: "Booking Approved",
     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
     receiver: booking.hostId.toString(),
     sender: hostId,
@@ -468,6 +471,7 @@ const approveBookingByHostFromDB = async (
   );
   if (admin) {
     await sendNotifications({
+      title: "Booking Approved",
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: admin._id.toString(),
       sender: hostId,
@@ -573,6 +577,7 @@ const cancelBookingFromDB = async (
 
       // Notification: User
       await sendNotifications({
+        title: "Refund Processed",
         text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
         receiver: booking.userId.toString(),
         sender: actorId,
@@ -587,6 +592,7 @@ const cancelBookingFromDB = async (
       );
       if (admin) {
         await sendNotifications({
+          title: "Refund Processed",
           text: `Refund of ${refundAmount} processed for booking ${booking.bookingId}`,
           receiver: admin._id.toString(),
           sender: actorId,
@@ -616,6 +622,7 @@ const cancelBookingFromDB = async (
 
   //  Send status notifications
   await sendNotifications({
+    title: "Booking Cancelled",
     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
     receiver: booking.userId.toString(),
     sender: actorId,
@@ -625,6 +632,7 @@ const cancelBookingFromDB = async (
   });
 
   await sendNotifications({
+    title: "Booking Cancelled",
     text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
     receiver: booking.hostId.toString(),
     sender: actorId,
@@ -638,6 +646,7 @@ const cancelBookingFromDB = async (
   );
   if (admin) {
     await sendNotifications({
+      title: "Booking Cancelled",
       text: `Booking ${booking.bookingId} status is ${booking.bookingStatus}`,
       receiver: admin._id.toString(),
       sender: actorId,

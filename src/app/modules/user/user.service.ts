@@ -132,6 +132,7 @@ const createHostToDB = async (payload: any) => {
 
   if (admin) {
     await sendNotifications({
+      title: "New Host Created",
       text: `New host account created successfully by admin (${admin.name || admin._id})`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
@@ -139,7 +140,7 @@ const createHostToDB = async (payload: any) => {
       referenceModel: "User",
     });
   }
-
+  
   return createHost;
 };
 
@@ -405,6 +406,7 @@ const deleteHostByIdFromD = async (id: string) => {
 
   if (admin) {
     await sendNotifications({
+      title: "Host Account Deleted",
       text: `Host deleted successfully by admin (${admin.name || admin._id})`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
@@ -489,6 +491,7 @@ const createUserToDB = async (payload: any) => {
 
   if (admin) {
     await sendNotifications({
+      title: "New User Signup",
       text: `New user signed up successfully`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
@@ -510,7 +513,7 @@ const getUserProfileFromDB = async (user: JwtPayload): Promise<any> => {
 
   const profile: any = { ...isExistUser.toObject() };
 
-  // যদি host হয়, extra stats
+  // if host, extra stats
   if (profile.role === USER_ROLES.HOST) {
     // Total bookings
     const totalBookings = await Booking.countDocuments({ hostId: id });
@@ -526,7 +529,7 @@ const getUserProfileFromDB = async (user: JwtPayload): Promise<any> => {
       totalBookings > 0
         ? Math.round((completedBookings / totalBookings) * 100)
         : 0;
-
+         
     const hostCar = await Car.findOne({ assignedHosts: id }, { _id: 1 });
 
     const trips = hostCar ? await getCarTripCount(hostCar._id) : 0;

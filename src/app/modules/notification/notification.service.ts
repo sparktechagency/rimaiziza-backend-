@@ -7,24 +7,30 @@ import { NOTIFICATION_TYPE } from "./notification.constant";
 // get notifications
 const getNotificationFromDB = async (
   user: JwtPayload,
-): Promise<INotification> => {
-  const result = await Notification.find({ receiver: user.id })
-    .populate("receiver sender referenceId")
-    .sort({
-      createdAt: -1,
-    });
+  query: Record<string, unknown>,
+) => {
+  const baseQuery = Notification.find({ receiver: user.id }).populate(
+    "receiver sender referenceId",
+  );
 
   const unreadCount = await Notification.countDocuments({
     receiver: user.id,
     read: false,
   });
 
-  const data: any = {
-    result,
-    unreadCount,
-  };
+  const queryBuilder = new QueryBuilder(baseQuery, query).sort().paginate();
 
-  return data;
+  const result = await queryBuilder.modelQuery;
+
+  const meta = await queryBuilder.countTotal();
+
+  return {
+    data: result,
+    meta: {
+      ...meta,
+      unreadCount,
+    },
+  };
 };
 
 // read notifications only for user
@@ -59,7 +65,7 @@ const adminNotificationFromDB = async (query: any) => {
     read: false,
   });
 
-  const queryBuilder = new QueryBuilder(baseQuery, query).paginate();
+  const queryBuilder = new QueryBuilder(baseQuery, query).sort().paginate();
 
   const result = await queryBuilder.modelQuery;
 

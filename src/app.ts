@@ -18,7 +18,7 @@ app.post(
   express.raw({ type: "application/json" }),
   handleStripeWebhook,
 );
-  
+
 // morgan
 app.use(Morgan.successHandler);
 app.use(Morgan.errorHandler);
@@ -30,7 +30,8 @@ app.use(
       "http://10.10.7.46:30011",
       "http://10.10.7.46:3015",
       "http://10.10.7.41:5003",
-      "http://10.10.7.46:3014"
+      "http://10.10.7.46:3014",
+      "https://rimaiziza-dashboard.vercel.app"
     ],
     credentials: true,
   }),

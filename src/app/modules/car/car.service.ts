@@ -49,10 +49,12 @@ const createCarToDB = async (payload: ICar) => {
 
   if (admin) {
     await sendNotifications({
-      text: `Car created successfully by admin (${admin.name || admin._id})`,
+      title: "New Car Created",
+      text: `Car created successfully`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
       referenceId: result._id.toString(),
+      referenceModel: "Car",
     });
   }
 
@@ -102,10 +104,10 @@ export type ArrayActionValue =
   | string
   | Types.ObjectId
   | {
-      label: string;
-      value: string;
-      icon?: string;
-    };
+    label: string;
+    value: string;
+    icon?: string;
+  };
 
 export interface IArrayAction {
   field: "images" | "availableDays" | "facilities" | "assignedHosts";
@@ -221,7 +223,8 @@ const updateCarByIdToDB = async (
 
   if (admin) {
     await sendNotifications({
-      text: `Car updated successfully by admin (${admin.name || admin._id})`,
+      title: "Car Updated",
+      text: `Car updated successfully`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
       referenceId: updated._id.toString(),
@@ -248,7 +251,8 @@ const deleteCarByIdFromDB = async (id: string) => {
 
   if (admin) {
     await sendNotifications({
-      text: `Car deleted successfully by admin (${admin.name || admin._id})`,
+      title: "Car Deleted",
+      text: `Car deleted successfully`,
       receiver: admin._id.toString(),
       type: NOTIFICATION_TYPE.ADMIN,
       referenceId: result._id.toString(),

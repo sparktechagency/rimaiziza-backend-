@@ -53,6 +53,7 @@ const createReview = async (payload: IReview, reviewerId: string) => {
       ? NOTIFICATION_TYPE.HOST
       : NOTIFICATION_TYPE.USER;
   await sendNotifications({
+    title: "New Review Received",
     text: `You received a new rating (${ratingValue} star)`,
     receiver: review.reviewForId.toString(),
     type,

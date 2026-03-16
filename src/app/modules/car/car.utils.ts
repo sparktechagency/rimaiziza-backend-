@@ -457,6 +457,7 @@ export const notifyAdminCarAction = async (
   if (!admin) return;
 
   await sendNotifications({
+    title: `Car ${action.charAt(0).toUpperCase() + action.slice(1)}`,
     text: `Car ${action} successfully by admin (${admin.name || admin._id})`,
     receiver: admin._id.toString(),
     type: NOTIFICATION_TYPE.ADMIN,

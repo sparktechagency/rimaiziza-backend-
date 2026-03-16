@@ -4,6 +4,10 @@ import { NOTIFICATION_TYPE } from "./notification.constant";
 
 const notificationSchema = new Schema<INotification, NotificationModel>(
   {
+    title: {
+      type: String,
+      required: true,
+    },
     text: {
       type: String,
       required: true,
