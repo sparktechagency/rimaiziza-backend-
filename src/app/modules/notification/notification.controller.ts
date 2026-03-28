@@ -84,6 +84,69 @@ const adminRecentActivities = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
+
+// user single get
+const getSingleNotification = catchAsync(async (req, res) => {
+  const result = await NotificationService.getSingleNotificationFromDB(
+    req.user,
+    req.params.id,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Notification retrieved successfully",
+    data: result,
+  });
+});
+
+// user single read
+const readSingleNotification = catchAsync(async (req, res) => {
+  const result = await NotificationService.readSingleNotificationToDB(
+    req.user,
+    req.params.id,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Notification marked as read",
+    data: result,
+  });
+});
+
+// admin single get
+const adminGetSingleNotification = catchAsync(async (req, res) => {
+  const result =
+    await NotificationService.adminGetSingleNotificationFromDB(
+      req.params.id,
+    );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Admin notification retrieved successfully",
+    data: result,
+  });
+});
+
+// admin single read
+const adminReadSingleNotification = catchAsync(async (req, res) => {
+  const result =
+    await NotificationService.adminReadSingleNotificationToDB(
+      req.params.id,
+    );
+
+    console.log(result, "RESULT");
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Admin notification marked as read",
+    data: result,
+  });
+});
+
 export const NotificationController = {
   adminNotificationFromDB,
   getNotificationFromDB,
@@ -91,4 +154,8 @@ export const NotificationController = {
   adminReadNotification,
   getRecentActivities,
   adminRecentActivities,
+  getSingleNotification,
+  readSingleNotification,
+  adminGetSingleNotification,
+  adminReadSingleNotification,
 };

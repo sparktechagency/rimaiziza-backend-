@@ -38,4 +38,30 @@ router.get(
   NotificationController.adminRecentActivities,
 );
 
+// user routes
+router.get(
+  "/:id",
+  auth(USER_ROLES.USER, USER_ROLES.HOST),
+  NotificationController.getSingleNotification,
+);
+
+router.patch(
+  "/:id/read",
+  auth(USER_ROLES.USER, USER_ROLES.HOST),
+  NotificationController.readSingleNotification,
+);
+
+// admin routes
+router.get(
+  "/admin/:id",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  NotificationController.adminGetSingleNotification,
+);
+
+router.patch(
+  "/admin/:id/read",
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  NotificationController.adminReadSingleNotification,
+);
+
 export const NotificationRoutes = router;

@@ -100,6 +100,58 @@ const adminRecentActivitiesFromDB = async () => {
   return result;
 };
 
+// get single notification (user)
+const getSingleNotificationFromDB = async (
+  user: JwtPayload,
+  id: string,
+): Promise<INotification | null> => {
+  const result = await Notification.findOne({
+    _id: id,
+    receiver: user.id,
+  }).populate("receiver sender referenceId");
+
+  return result;
+};
+
+// read single notification (user)
+const readSingleNotificationToDB = async (
+  user: JwtPayload,
+  id: string,
+): Promise<INotification | null> => {
+  const result = await Notification.findOneAndUpdate(
+    { _id: id, receiver: user.id },
+    { $set: { read: true } },
+    { new: true },
+  );
+
+  return result;
+};
+
+// admin get single notification
+const adminGetSingleNotificationFromDB = async (
+  id: string,
+): Promise<INotification | null> => {
+  const result = await Notification.findOne({
+    _id: id,
+    type: NOTIFICATION_TYPE.ADMIN,
+  }).populate("receiver sender referenceId");
+
+  return result;
+};
+
+// admin read single notification
+const adminReadSingleNotificationToDB = async (
+  id: string,
+): Promise<INotification | null> => {
+  const result = await Notification.findOneAndUpdate(
+    { _id: id, type: NOTIFICATION_TYPE.ADMIN },
+    { $set: { read: true } },
+    { new: true },
+  );
+
+  return result;
+};
+
 export const NotificationService = {
   adminNotificationFromDB,
   getNotificationFromDB,
@@ -107,4 +159,8 @@ export const NotificationService = {
   adminReadNotificationToDB,
   getRecentActivitiesFromDB,
   adminRecentActivitiesFromDB,
+  getSingleNotificationFromDB,
+  readSingleNotificationToDB,
+  adminGetSingleNotificationFromDB,
+  adminReadSingleNotificationToDB,
 };
