@@ -22,6 +22,7 @@ const getNotificationFromDB = catchAsync(
   },
 );
 
+
 const readNotification = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
   const result = await NotificationService.readNotificationToDB(user);

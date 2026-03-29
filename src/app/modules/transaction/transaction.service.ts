@@ -108,10 +108,10 @@ const createBookingPaymentSession = async (
       transactionId: transaction._id.toString(),
       bookingId: booking._id.toString(),
     },
-    // success_url: `https://api.gogreenmatrix.my/api/v1/bookings/success`,
-    // cancel_url: `https://api.gogreenmatrix.my/api/v1/bookings/fail`,
-    success_url: `http://10.10.7.41:5007/api/v1/bookings/success`,
-    cancel_url: `http://10.10.7.41:5007/api/v1/bookings/fail`,
+    success_url: `https://api.gogreenmatrix.my/api/v1/bookings/success`,
+    cancel_url: `https://api.gogreenmatrix.my/api/v1/bookings/fail`,
+  //   success_url: `http://10.10.7.41:5007/api/v1/bookings/success`,
+  //   cancel_url: `http://10.10.7.41:5007/api/v1/bookings/fail`,
   });
 
   transaction.stripeSessionId = session.id;
@@ -206,8 +206,10 @@ const createExtendBookingPaymentSession = async (
       originalBookingId: booking._id.toString(),
       extendToDate: newToDate.toISOString(),
     },
-    success_url: `http://10.10.7.41:5007/api/v1/bookings/success`,
-    cancel_url: `http://10.10.7.41:5007/api/v1/bookings/fail`,
+    // success_url: `http://10.10.7.41:5007/api/v1/bookings/success`,
+    // cancel_url: `http://10.10.7.41:5007/api/v1/bookings/fail`,
+    success_url: `https://api.gogreenmatrix.my/api/v1/bookings/success`,
+    cancel_url: `https://api.gogreenmatrix.my/api/v1/bookings/fail`,
   });
 
   transaction.stripeSessionId = session.id;
